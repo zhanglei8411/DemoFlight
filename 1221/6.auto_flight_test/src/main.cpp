@@ -95,6 +95,7 @@ int main(int argc,char **argv)
 	if(argc == 2)
 	{
 		wait_time = atoi(argv[1]);
+
 	}
 	wait_time = wait_time<10 ? 10 : wait_time;
 	wait_time = wait_time>90 ? 90 : wait_time;
@@ -145,7 +146,7 @@ int main(int argc,char **argv)
 		wireless_send(str, strlen((const char *)str));
 	}while(start_pos.longti == 0);
 	Set_Leg_Start_Pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
-	Set_Leg_End_Pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);
+	Set_Leg_End_Pos(&task_info, start_pos.longti - 0.000001, start_pos.lati + 0.000001, 0.100000);
 	XY_Debug_Get_Pos(&debug_package.start, task_info.longti_s, task_info.lati_s, task_info.alti_s);
 	XY_Debug_Get_Pos(&debug_package.end, task_info.longti_e, task_info.lati_e, task_info.alti_e);
 	

@@ -104,17 +104,37 @@ int Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, floa
 
 
 /*定点悬停控制程序*/
-int Cal_Target_Point(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t tpos, attitude_data_t *puser_ctrl_data)
+int Cal_Target_Point(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t tpos, float height, attitude_data_t *puser_ctrl_data)
 {
 	double k1d, k1p, k2d, k2p;
-	double roll_vel, 
+	double y_e_vel, x_n_vel;
+	double last_distance = 0.0;
 	//待设计的控制参数
-	k1d=0.5;
-	k1p=1;		
-	k2d=0.5;
-	k2p=1;	
 
-	
+	k1d=0.5;
+	k1p=2;	
+	k2d=0.5;
+	k2p=2;
+
+	y_e_vel=-k1p*(cpos.longti-tpos.longti)*1000000-k1d*(cvel.y);
+	x_n_vel=-k2p*(cpos.lati-tpos.lati)*1000000-k2d*(cvel.x);
+
+	puser_ctrl_data->ctrl_flag=0x40;//垂直速度，水平速度，航向角度控制模式
+	puser_ctrl_data->roll_or_x = x_n_vel;			//传递滚转角 
+	puser_ctrl_data->pitch_or_y = y_e_vel;		//俯仰角 
+	puser_ctrl_data->thr_z =  height - cpos.height;   // 高度单位负反馈控制，后期可调整反馈系数优化性能 -z 
+	puser_ctrl_data->yaw = 0;
+
+	last_distance=sqrt(pow((cpos.lati- tpos.lati)*6000000, 2)+pow((cpos.longti- tpos.longti)*6000000, 2));
+
+#if 1
+	printf("Target->last_distance is %lf\n", last_distance);
+#endif
+
+	if(last_distance < 0.2)
+		return 1;
+	else
+		return 0;
 
 	
 }
@@ -196,7 +216,7 @@ int Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float h
 #endif
 
 	if(last_distance < 3)
-		*flag = Cal_Target_Point(cvel, cpos, epos, puser_ctrl_data);
+		*flag = Cal_Target_Point(cvel, cpos, epos, height, puser_ctrl_data);
 	
 }
 
