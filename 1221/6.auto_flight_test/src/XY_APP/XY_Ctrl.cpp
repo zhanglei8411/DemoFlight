@@ -102,6 +102,27 @@ int Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, floa
 	pthread_mutex_unlock(&debug_mutex);
 }
 
+
+/*定点悬停控制程序*/
+int Cal_Target_Point(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t tpos, attitude_data_t *puser_ctrl_data)
+{
+	double k1d, k1p, k2d, k2p;
+	double roll_vel, 
+	//待设计的控制参数
+	k1d=0.5;
+	k1p=1;		
+	k2d=0.5;
+	k2p=1;	
+
+	
+
+	
+}
+
+
+
+
+
 int Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float height, Link_Leg_Node *p_legn, attitude_data_t *puser_ctrl_data, int *flag)
 {
 	double k1d, k1p, k2d, k2p;
@@ -147,12 +168,14 @@ int Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float h
 	
     thetaC = k1p*(cpos.lati- epos.lati)*1000000 + k1d*cvel.x;//期望的俯仰角 
 	phiC = -k2p*(cpos.longti- epos.longti)*1000000 - k2d*cvel.y;//期望的滚转角
+	
 	//printf("%.12lf, %.12lf; %.12lf, %.12lf.\n", k1p*(cpos.longti- epos.longti), k1d*cvel.x, -k2p*(cpos.lati - epos.lati), -k2d*cvel.y);
 
-	puser_ctrl_data->yaw = 0;
+	puser_ctrl_data->ctrl_flag=0x00;//垂直速度，水平姿态，航向角度控制模式
 	puser_ctrl_data->roll_or_x = phiC;			//传递滚转角 
 	puser_ctrl_data->pitch_or_y = thetaC;		//俯仰角 
 	puser_ctrl_data->thr_z =  height - cpos.height;   // 高度单位负反馈控制，后期可调整反馈系数优化性能 -z 
+	puser_ctrl_data->yaw = 0;
 
 	last_distance = sqrt(pow((cpos.lati- epos.lati)*6000000, 2)+pow((cpos.longti- epos.longti)*6000000, 2));
 
@@ -168,12 +191,12 @@ int Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float h
 	pthread_cond_signal(&debug_cond);	//释放条件变量
 	pthread_mutex_unlock(&debug_mutex);
 	
-#if 0
+#if 1
 	printf("last_distance is %lf\n", last_distance);
 #endif
 
-	if(last_distance < 1)
-		*flag = 1;
+	if(last_distance < 3)
+		*flag = Cal_Target_Point(cvel, cpos, epos, puser_ctrl_data);
 	
 }
 

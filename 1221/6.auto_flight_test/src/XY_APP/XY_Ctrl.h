@@ -10,6 +10,7 @@
 
 int Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, float height, attitude_data_t *puser_ctrl_data, int *flag);
 int Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float height, Link_Leg_Node *p_legn, attitude_data_t *puser_ctrl_data, int *flag);
+int Cal_Target_Point(api_pos_data_t cpos, api_vel_data_t cvel, api_pos_data_t tpos, attitude_data_t *puser_ctrl_data);
 
 
 
