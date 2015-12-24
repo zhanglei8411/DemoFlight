@@ -132,7 +132,7 @@ int Cal_Target_Point(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t sp
 	double last_distance = 0.0;
 	static XYZ tXYZ, txyz, cXYZ, cxyz, sXYZ,sxyz;
 	
-	//定点控制参数
+	//定点控制参数,zhanglei simulated in 1224
 
 	k1d=0.4;
 	k1p=1;	
@@ -141,11 +141,11 @@ int Cal_Target_Point(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t sp
 
 	geo2xyz(tpos, &tXYZ);
 	geo2xyz(cpos,&cXYZ);
-	geo2xyz(spos,&sXYZ);
+//	geo2xyz(spos,&sXYZ);
 
 	XYZ2xyz(spos, cXYZ, &cxyz);
 	XYZ2xyz(spos, tXYZ, &txyz);
-	XYZ2xyz(spos, sXYZ, &sxyz);
+//	XYZ2xyz(spos, sXYZ, &sxyz);
 
 #if 1
 

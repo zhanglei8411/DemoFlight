@@ -9,6 +9,7 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 extern struct debug_info debug_package;
 
 
+
 static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 {
 	api_vel_data_t cur_vel;
@@ -310,7 +311,7 @@ int temporary_init_route_list(void)
 		DJI_Pro_Get_Pos(&start_pos);
 		XY_Debug_Easy_Send(str, strlen((const char *)str));
 	}while(start_pos.longti == 0);
-	
+
 	set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
 	set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);
 	XY_Debug_Get_Pos(&debug_package.start, task_info.start._longti, task_info.start._lati, task_info.start._alti);
