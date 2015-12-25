@@ -110,14 +110,14 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
     thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//期望的俯仰角 XYZ球心坐标系，Z轴North+,+thetaC_pitch产生South速递
 	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//期望的滚转角 XYZ球心坐标系，X轴West+, +phiC_roll产生East速度
 
-#if 0
+#if 1
 	i++;
 	if(i>10)
 	{
 		i = 0;
 		thetaC1 = k1p*(cXYZ.z-eXYZ.z);	
 		thetaC2 = k1d*cvel.x;
-		phiC1 = k2p*(cXYZ.x-eXYZ.x)
+		phiC1 = k2p*(cXYZ.x-eXYZ.x);
 		phiC2 = - k2d*cvel.y;
 	
 		sprintf(msg, "\n[%.8lf] [%.8lf] [%.8lf] [%.8lf]\n", thetaC1, thetaC2, phiC1, phiC2);

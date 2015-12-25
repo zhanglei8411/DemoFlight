@@ -11,11 +11,11 @@ else
     echo "Here is DJI_Onboard_API_Cmdline_test"
     echo "Here is DJI_Onboard_API_Cmdline_test"
 
-    djipwd=/home/ubuntu/Work/New-code/Developing/Linux-Cmdline/output
+    xunyipwd=/home/ubuntu/Work/Test/output
 
     oldpwd=`pwd`
 
-    cd $djipwd
+    cd $xunyipwd
 
     ./DJI_Onboard_API_Cmdline_Test &
 

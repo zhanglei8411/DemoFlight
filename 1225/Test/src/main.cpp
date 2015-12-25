@@ -108,6 +108,7 @@ int main(int argc,char **argv)
 	}
 #endif
 
+#if 0
 	if(0 == XY_Load_Goods())
 	{
 		
@@ -120,7 +121,8 @@ int main(int argc,char **argv)
 	XY_Debug_Easy_Send(debug_msg, strlen((const char *)debug_msg));
 	
 	sleep(5);
-	
+
+#endif	
 	init_aircraft_status();
 
 	while(1)
