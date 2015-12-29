@@ -53,7 +53,7 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, f
 
 	if(t_height == LOW_HEIGHT)	//is down
 	{
-		
+		XY_Get_and_Print_Image_Data();
 	}
 
 	//Up down cotrol factor, add by zhanglei 1225
@@ -70,7 +70,7 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, f
 															puser_ctrl_data->pitch_or_y,
 															puser_ctrl_data->thr_z,
 															puser_ctrl_data->yaw);
-	XY_Debug_Get_Pos(&debug_package.cur, cpos.longti, cpos.lati, cpos.alti);
+	XY_Debug_Get_Pos(&debug_package.cur, cpos.longti,  cpos.lati,  cpos.alti, cpos.height);
 	XY_Debug_Get_Last_Dist(&debug_package.dist, 0);
 	
 	pthread_mutex_lock(&debug_mutex);
@@ -159,27 +159,28 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 
 	last_distance_xyz=sqrt(pow((cxyz.x- exyz.x), 2)+pow((cxyz.y-exyz.y), 2));
 
-
+#if 0
+		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//x轴在东半球向西为正，在x轴增加负号
+#endif
+	
+	if(last_distance_xyz < 5)
+	{
+		*flag = XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, spos, epos, height, puser_ctrl_data);
+		count = 0;
+		XY_Get_and_Print_Image_Data();
+	}
+	
+	//XY_Debug_Get_Zhanglei_Data(&debug_package.zl, cxyz.x- exyz.x, cxyz.y-exyz.y);
 	XY_Debug_Get_UserCtrl(&debug_package.user_ctrl_data, 	puser_ctrl_data->roll_or_x,
 															puser_ctrl_data->pitch_or_y,
 															puser_ctrl_data->thr_z,
 															puser_ctrl_data->yaw);
-	XY_Debug_Get_Pos(&debug_package.cur, cxyz.x,  cxyz.y,  cxyz.z);
+	XY_Debug_Get_Pos(&debug_package.cur, cxyz.x,  cxyz.y,  cxyz.z, cpos.height);
 	XY_Debug_Get_Last_Dist(&debug_package.dist, last_distance_xyz);
 
 	pthread_mutex_lock(&debug_mutex);
 	pthread_cond_signal(&debug_cond);	//释放条件变量
 	pthread_mutex_unlock(&debug_mutex);
-
-#if 0
-		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//x轴在东半球向西为正，在x轴增加负号
-#endif
-	
-		if(last_distance_xyz < 5)
-		{
-			*flag = XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, spos, epos, height, puser_ctrl_data);
-			count = 0;
-		}
 	
 }
 
@@ -240,7 +241,7 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	XYZ2xyz(spos, cXYZ, &cxyz);
 	XYZ2xyz(spos, tXYZ, &txyz);
 
-	//1225下午仿真结果参数，by zhanglei ok
+	//1225下午仿真结果参数，by zhanglei ok, 1227飞行参数ok
 	k1d=0.05;
 	k1p=0.4;	
 	k2d=0.05;
@@ -267,6 +268,7 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	printf("HoverDis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- txyz.x),(cxyz.y-txyz.y));
 #endif
 
+	XY_Debug_Get_Zhanglei_Data(&debug_package.zl, cxyz.x- txyz.x, cxyz.y-txyz.y);
 	if(last_distance_xyz < HOVER_POINT_RANGE)
 	{
 		
@@ -284,7 +286,6 @@ int XY_Cal_Vel_Ctrl_Data_Image(float height)
 {
 	
 	Offset offset;
-	int CameraInstallAngleDegree;
 	api_quaternion_data_t cur_quaternion;
 	
 	
@@ -301,30 +302,27 @@ int XY_Cal_Vel_Ctrl_Data_Image(float height)
 	}
 	/* get quaternion */
 	DJI_Pro_Get_Quaternion(&cur_quaternion);
-
-
-	/* Trans quaternion to Euler angle*/
-
-	
-	/* Correct the offset*/
-	
-
-
-	/* DJI Ground CoordinateSys to Camera CoSys*/
-	CameraInstallAngleDegree=90;
-
-	
-	
-	
+}
 
 
 
+int XY_Get_and_Print_Image_Data(void)
+{
+	Offset offset;
 
-	/* */
-	
-	
-	
-	
+	/* get offset */
+	if(read_refresh_flag() == 1)
+	{
+		clear_refresh_flag();
+		offset = get_stored_offset_block();
+		//printf("%f %f %f\n", offset.x, offset.y, offset.z);
+		XY_Debug_Get_Offset_Data(&debug_package.offset3f, offset);
+		return 0;
+	}
+	else 
+	{
+		return 1;
+	}
 }
 
 
