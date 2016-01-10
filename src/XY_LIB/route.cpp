@@ -374,11 +374,14 @@ int temporary_init_route_list(void)
 		}while(start_pos.longti == 0);
 
 		set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
-		//set_leg_end_pos(&task_info, start_pos.longti - 0.000002, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
+		set_leg_end_pos(&task_info, start_pos.longti - 0.000002, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
+#if 0
 		set_leg_end_pos(&task_info,
 						(TARGET_LONTI_FROM_GOOGLE + GPS_DELTA_LONGTI),
 						(TARGET_LATI_FROM_GOOGLE + GPS_DELTA_LATI), 
 						(TARGET_ALTI_FROM_DJI_TEST) );	//01-10,ÓðÃ«Çò³¡Æð·Éµã
+#endif
+
 		go_back = 1;
 	}
 	else if(go_back == 1)

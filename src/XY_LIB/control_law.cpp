@@ -155,11 +155,11 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 	static int i = 0;
 
 
-/*	//è·Ÿè¸ªç‚¹æ§åˆ¶å‚æ•°, last modified by zhanglei, 1222
+/*	//¸ú×Ùµã¿ØÖÆ²ÎÊı, last modified by zhanglei, 1222
 	k1d=0.5;
-	k1p=1;		//1222 by zhanglei è°ƒæ•´å¢åŠ 10å€ï¼Œé£è¡Œæµ‹è¯•okï¼Œä¹‹å‰ä¸ºä»¿çœŸokçš„å‚æ•°0.1
+	k1p=1;		//1222 by zhanglei µ÷ÕûÔö¼Ó10±¶£¬·ÉĞĞ²âÊÔok£¬Ö®Ç°Îª·ÂÕæokµÄ²ÎÊı0.1
 	k2d=0.5;
-	k2p=1;		//1222 by zhanglei è°ƒæ•´å¢åŠ 10å€ï¼Œé£è¡Œæµ‹è¯•okï¼Œä¹‹å‰ä¸ºä»¿çœŸokçš„å‚æ•°0.1
+	k2p=1;		//1222 by zhanglei µ÷ÕûÔö¼Ó10±¶£¬·ÉĞĞ²âÊÔok£¬Ö®Ç°Îª·ÂÕæokµÄ²ÎÊı0.1
 */
 	
 	if(count == 0)
@@ -175,45 +175,44 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 		count++;
 	}
 
-	//ä»å¤§åœ°åæ ‡ç³»è½¬æ¢åˆ°çƒå¿ƒåæ ‡ç³»
+	//´Ó´óµØ×ø±êÏµ×ª»»µ½ÇòĞÄ×ø±êÏµ
 	geo2XYZ(epos, &eXYZ);
 	geo2XYZ(cpos, &cXYZ);
 	//´ÓÇòĞÄ×ø±êÏµ×ªµ½Õ¾ĞÄ×ø±êÏµadd by zhanglei, 1225;
 	XYZ2xyz(spos, eXYZ, &exyz);
 	XYZ2xyz(spos, cXYZ, &cxyz);
 
-
-	//ç«™å¿ƒåæ ‡ç³»çš„æ§åˆ¶å‚æ•°add by zhanglei, 1225;
+	//Õ¾ĞÄ×ø±êÏµµÄ¿ØÖÆ²ÎÊıadd by zhanglei, 1225;
 	k1d=0.5;
 	k1p=1;		
 	k2d=0.5;
 	k2p=1;	
 
-	//ç«™å¿ƒåæ ‡ç³»ä¸‹è¿›è¡Œå§¿æ€æ§åˆ¶add by zhanglei, 1225;
+	//Õ¾ĞÄ×ø±êÏµÏÂ½øĞĞ×ËÌ¬¿ØÖÆadd by zhanglei, 1225;
 	thetaC= k1p*(cxyz.x-exyz.x)+k1d*cvel.x;
 	phiC=-k2p*(cxyz.y-exyz.y)-k2d*cvel.y;
 
 /*	
-	//åœ¨çƒå¿ƒåæ ‡ç³»ä¸‹è·Ÿè¸ªç‚¹å§¿æ€æ§åˆ¶, add by zhanglei, 1224; simulated 1225am ok by zl.
-    thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//æœŸæœ›çš„ä¿¯ä»°è§’ XYZçƒå¿ƒåæ ‡ç³»ï¼ŒZè½´North+,+thetaC_pitchäº§ç”ŸSouthé€Ÿé€’
-	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//æœŸæœ›çš„æ»šè½¬è§’ XYZçƒå¿ƒåæ ‡ç³»ï¼ŒXè½´West+, +phiC_rolläº§ç”ŸEasté€Ÿåº¦
+	//ÔÚÇòĞÄ×ø±êÏµÏÂ¸ú×Ùµã×ËÌ¬¿ØÖÆ, add by zhanglei, 1224; simulated 1225am ok by zl.
+    thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//ÆÚÍûµÄ¸©Ñö½Ç XYZÇòĞÄ×ø±êÏµ£¬ZÖáNorth+,+thetaC_pitch²úÉúSouthËÙµİ
+	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//ÆÚÍûµÄ¹ö×ª½Ç XYZÇòĞÄ×ø±êÏµ£¬XÖáWest+, +phiC_roll²úÉúEastËÙ¶È
 */
 
-	puser_ctrl_data->ctrl_flag=0x00;//å‚ç›´é€Ÿåº¦ï¼Œæ°´å¹³å§¿æ€ï¼Œèˆªå‘è§’åº¦æ§åˆ¶æ¨¡å¼
-	puser_ctrl_data->roll_or_x = phiC;			//æ»šè½¬è§’.æœºä½“xè½´ã€‚æŒ‰ç…§ç›®å‰ Groundåæ ‡ç³»ï¼Œäº§ç”Ÿyè½´é€Ÿåº¦
-	puser_ctrl_data->pitch_or_y = thetaC;		//ä¿¯ä»°è§’.æœºä½“yè½´ã€‚æŒ‰ç…§ç›®å‰ Groundåæ ‡ç³»ï¼Œäº§ç”Ÿ-xè½´é€Ÿåº¦
-	puser_ctrl_data->thr_z =  height - cpos.height;   // é«˜åº¦å•ä½è´Ÿåé¦ˆæ§åˆ¶ï¼ŒåæœŸå¯è°ƒæ•´åé¦ˆç³»æ•°ä¼˜åŒ–æ€§èƒ½ -z 
+	puser_ctrl_data->ctrl_flag=0x00;//´¹Ö±ËÙ¶È£¬Ë®Æ½×ËÌ¬£¬º½Ïò½Ç¶È¿ØÖÆÄ£Ê½
+	puser_ctrl_data->roll_or_x = phiC;			//¹ö×ª½Ç.»úÌåxÖá¡£°´ÕÕÄ¿Ç° Ground×ø±êÏµ£¬²úÉúyÖáËÙ¶È
+	puser_ctrl_data->pitch_or_y = thetaC;		//¸©Ñö½Ç.»úÌåyÖá¡£°´ÕÕÄ¿Ç° Ground×ø±êÏµ£¬²úÉú-xÖáËÙ¶È
+	puser_ctrl_data->thr_z =  height - cpos.height;   // ¸ß¶Èµ¥Î»¸º·´À¡¿ØÖÆ£¬ºóÆÚ¿Éµ÷Õû·´À¡ÏµÊıÓÅ»¯ĞÔÄÜ -z 
 	puser_ctrl_data->yaw = 0;
 
-//	last_distance=sqrt(pow((-1)*(cXYZ.x- eXYZ.x), 2)+pow((cXYZ.z-eXYZ.z), 2));//Xè½´åœ¨ä¸œåŠçƒå‘è¥¿ä¸ºæ­£ï¼Œåœ¨xè½´å¢åŠ è´Ÿå·
+//	last_distance=sqrt(pow((-1)*(cXYZ.x- eXYZ.x), 2)+pow((cXYZ.z-eXYZ.z), 2));//XÖáÔÚ¶«°ëÇòÏòÎ÷ÎªÕı£¬ÔÚxÖáÔö¼Ó¸ººÅ
 
 	last_distance_xyz=sqrt(pow((cxyz.x- exyz.x), 2)+pow((cxyz.y-exyz.y), 2));
 
 #if 0
-		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//xè½´åœ¨ä¸œåŠçƒå‘è¥¿ä¸ºæ­£ï¼Œåœ¨xè½´å¢åŠ è´Ÿå·
+		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//xÖáÔÚ¶«°ëÇòÏòÎ÷ÎªÕı£¬ÔÚxÖáÔö¼Ó¸ººÅ
 #endif
 	
-	if(last_distance_xyz < TRANS_TO_HOVER_DIS)
+	if(last_distance_xyz < 5)
 	{
 		*flag = XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, spos, epos, height, puser_ctrl_data);
 		count = 0;
@@ -274,7 +273,7 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 
 	if(last_distance_xyz < HOVER_POINT_RANGE)
 	{
-		printf("HoverVel--> X:%.8lf, Y:%.8lf\n",cvel.x,cvel.y);
+		//printf("HoverVel--> X:%.8lf, Y:%.8lf\n",cvel.x,cvel.y);
 		puser_ctrl_data->roll_or_x = 0;			//x±±ÏòÆÚÍûËÙ¶È
 		puser_ctrl_data->pitch_or_y = 0;		//y¶«ÏòÆÚÍûËÙ¶È		
 

@@ -30,6 +30,7 @@
 #define TARGET_LATI_FROM_GOOGLE		0.528442797
 #define TARGET_ALTI_FROM_DJI_TEST	-139.26440430	
 
+
 #define Ultra_DELTA_UNLOAD 						(0.045) //m， 0110试验实际安装数据
 #define Ultra_DELTA_LOAD						(0.148) //m,章磊估计值，未测试
 
