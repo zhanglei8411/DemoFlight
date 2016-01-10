@@ -17,8 +17,12 @@
 #include "common/common.h"
 
 
-#define SAFETY_HEIGHT				(10.0)	//m
-#define LOW_HEIGHT					(0.25)	//m
+#define TAKEOFF_HEIGHT_H_U1						(1.0)	//m
+#define GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2			(10.0)	//m
+#define GO_UP_TO_CRUICE_HEIGHT_H_U3				(40.0)	//m, 恒生小房子的安全高度
+#define GO_DOWN_TO_HEIGHT_H_D3					(15.0)	//m
+#define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
+#define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
 
 
 

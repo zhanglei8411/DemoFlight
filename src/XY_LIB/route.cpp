@@ -42,7 +42,7 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 			 * 3.1 check if reach the SAFETY_HEIGHT
 			 * 3.2 cal ctrl data according to (SAFETY_HEIGHT - cur_pos.height)
 			 */
-			XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, SAFETY_HEIGHT, &user_ctrl_data, &flag);
+			XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, GO_UP_TO_CRUICE_HEIGHT_H_U3, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == 0 )
 		{
@@ -50,11 +50,11 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 			//Cal_Attitude_Ctrl_Data(cur_vel, cur_pos, LOW_HEIGHT, &user_ctrl_data, &flag);
 			/* 
 			 * 3.1 LOW_HEIGHT和SAFETY_HEIGHT是目标高度
-			 * 3.2 (SAFETY_HEIGHT - cur_pos.height) 或 (cur_pos.height - LOW_HEIGHT) 是否小于某个可视为到达的距离值
+			 * 3.2 (SAFETY_HEIGHT - cur_pos.height) 或 (cur_pos.height - GO_DOWN_TO_HEIGHT_READY_TO_LAND_HD1) 是否小于某个可视为到达的距离值
 			 * 是: flag置1，退出
 			 * 否: 根据当前剩余距离计算user_ctrl_data
 			 */
-			 XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, LOW_HEIGHT, &user_ctrl_data, &flag);
+			 XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1, &user_ctrl_data, &flag);
 		}
 
 
@@ -109,7 +109,7 @@ static void *XY_Aircraft_P2P_Thread_Func(void * arg)
 		 * 是:flag置一,退出
 		 * 否:根据剩余距离和当前速度计算user_ctrl_data
 		 */
-		XY_Cal_Attitude_Ctrl_Data_P2P(cur_vel, cur_pos, SAFETY_HEIGHT, cur_legn, &user_ctrl_data, &flag);
+		XY_Cal_Attitude_Ctrl_Data_P2P(cur_vel, cur_pos, GO_UP_TO_CRUICE_HEIGHT_H_U3, cur_legn, &user_ctrl_data, &flag);
 
 		if(flag == 1)
 		{
@@ -333,7 +333,7 @@ int temporary_init_route_list(void)
 		}while(start_pos.longti == 0);
 
 		set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
-		set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);
+		set_leg_end_pos(&task_info, start_pos.longti - 0.000002, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
 		go_back = 1;
 	}
 	else if(go_back == 1)

@@ -1,10 +1,10 @@
 #include "control_law.h"
 #include "range.h"
 
-#define DT 0.02
-#define HOVER_POINT_RANGE 0.1
-#define HOVER_VELOCITY_MIN 0.1
-
+#define DT 						(0.02)
+#define HOVER_POINT_RANGE 		(0.1)
+#define HOVER_VELOCITY_MIN 		(0.1)
+#define TRANS_TO_HOVER_DIS 		(5.0) 
 
 extern struct debug_info debug_package;
 extern pthread_mutex_t debug_mutex;
@@ -46,7 +46,30 @@ void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz *pxyz)
 
 }
 
+/*上升段控制*/
+/*
+int XY_Cal_Attitude_Ctrl_Data_Up(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
+{
+	puser_ctrl_data->roll_or_x = 0;
+	puser_ctrl_data->pitch_or_y = 0; 	 
+	double kp_z;
 
+	//Up down cotrol factor, add by zhanglei 1225
+	kp_z=0.2;
+
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //控制的是垂直速度
+
+	if(fabs(t_height - cpos.height) < 0.5)//modified the para, add fabs, by zhanglei 1225
+	{
+		*flag = 1;
+	}
+
+	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
+	
+}
+/*
+
+/*到达指定高度的上升下降段控制*/
 int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
 {
 	puser_ctrl_data->roll_or_x = 0;
@@ -54,7 +77,7 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, f
 	double kp_z;
 
 
-	if(t_height == LOW_HEIGHT)	//is down
+	if(t_height == GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1)	//is down
 	{
 		/*
 		float _ultra_data;
@@ -78,6 +101,8 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, f
 	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
 	
 }
+
+
 
 int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float height, Leg_Node *p_legn, attitude_data_t *puser_ctrl_data, int *flag)
 {
@@ -150,7 +175,7 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//x轴在东半球向西为正，在x轴增加负号
 #endif
 	
-	if(last_distance_xyz < 5)
+	if(last_distance_xyz < TRANS_TO_HOVER_DIS)
 	{
 		*flag = XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, spos, epos, height, puser_ctrl_data);
 		count = 0;
@@ -193,7 +218,7 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	k1d=0.05;
 	k1p=0.4;	
 	k2d=0.05;
-	k2p=0.4;
+	k2p=0.4;	
 
 	x_n_vel = -k1p*(cxyz.x-txyz.x)-k1d*(cvel.x);//xyz站心坐标系，x轴北向正
 	y_e_vel = -k2p*(cxyz.y-txyz.y)-k2d*(cvel.y);//xyz站心坐标系，y轴东向正
