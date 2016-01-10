@@ -24,6 +24,12 @@
 #define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
 #define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
 
+#define GPS_DELTA_LONGTI	(-0.000081)					//弧度，相对于Google map
+#define GPS_DELTA_LATI		(0.000044)
+#define TARGET_LONTI_FROM_GOOGLE	2.094503592			//羽毛球场起飞点
+#define TARGET_LATI_FROM_GOOGLE		0.528442797
+#define TARGET_ALTI_FROM_DJI_TEST	-139.26440430	
+
 #define Ultra_DELTA_UNLOAD 						(0.045) //m， 0110试验实际安装数据
 #define Ultra_DELTA_LOAD						(0.148) //m,章磊估计值，未测试
 
