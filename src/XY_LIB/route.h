@@ -24,6 +24,14 @@
 #define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
 #define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
 
+#define Ultra_DELTA_UNLOAD 						(0.045) //m， 0110试验实际安装数据
+#define Ultra_DELTA_LOAD						(0.148) //m,章磊估计值，未测试
+
+#define MODE_1_UP_TO_U2_IMAGE_VEL_1				1
+#define MODE_2_UP_TO_U3							2
+#define MODE_3_DOWN_TO_D3						3
+#define MODE_4_DOWN_TO_D2_IMAGE_VEL_N05			4
+#define MODE_5_DOWN_TO_D1						5
 
 
 inline void set_leg_seq(struct Leg *_pleg, int _leg_seq)

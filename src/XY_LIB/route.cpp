@@ -33,29 +33,31 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 		/* 2. get cur vel from M100 */
 		DJI_Pro_Get_GroundVo(&cur_vel);
 
-
-		if( (int)(*(int *)arg) == 1 )
+		if( (int)(*(int *)arg) == MODE_1_UP_TO_U2_IMAGE_VEL_1 )
 		{
-			/* 3. cal attitude data by vel and height  */
-			//Cal_Attitude_Ctrl_Data(cur_vel, cur_pos, SAFETY_HEIGHT, &user_ctrl_data, &flag);
-			/* 
-			 * 3.1 check if reach the SAFETY_HEIGHT
-			 * 3.2 cal ctrl data according to (SAFETY_HEIGHT - cur_pos.height)
-			 */
-			XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, GO_UP_TO_CRUICE_HEIGHT_H_U3, &user_ctrl_data, &flag);
+			/* up with image vel=1 */
+			XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(cur_vel, cur_pos, 1, GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2, &user_ctrl_data, &flag);
 		}
-		else if( (int)(*(int *)arg) == 0 )
+		else if( (int)(*(int *)arg) == MODE_2_UP_TO_U3)
 		{
-			/* 3. cal attitude data by vel and height  */
-			//Cal_Attitude_Ctrl_Data(cur_vel, cur_pos, LOW_HEIGHT, &user_ctrl_data, &flag);
-			/* 
-			 * 3.1 LOW_HEIGHT和SAFETY_HEIGHT是目标高度
-			 * 3.2 (SAFETY_HEIGHT - cur_pos.height) 或 (cur_pos.height - GO_DOWN_TO_HEIGHT_READY_TO_LAND_HD1) 是否小于某个可视为到达的距离值
-			 * 是: flag置1，退出
-			 * 否: 根据当前剩余距离计算user_ctrl_data
-			 */
-			 XY_Cal_Attitude_Ctrl_Data_UpDown(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1, &user_ctrl_data, &flag);
+			/* up to U3  */
+			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_UP_TO_CRUICE_HEIGHT_H_U3, &user_ctrl_data, &flag);
 		}
+		else if( (int)(*(int *)arg) == MODE_3_DOWN_TO_D3)
+		{
+			/* down to D3*/
+			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_H_D3, &user_ctrl_data, &flag);
+		}
+		else if( (int)(*(int *)arg) == MODE_4_DOWN_TO_D2_IMAGE_VEL_N05)
+		{
+			/* down with image vel=-0.5 */
+			XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(cur_vel, cur_pos,(-0.5), GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2, &user_ctrl_data, &flag);
+		}
+		else if( (int)(*(int *)arg) == MODE_5_DOWN_TO_D1 )
+		{
+			/* down to D1, ready to landing  */
+			 XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1, &user_ctrl_data, &flag);
+		}		
 
 
 		if(flag == 1)
@@ -139,7 +141,7 @@ static void *Route_Task_Thread_Func(void * arg)
 {
 	int ret;
 	pthread_t A_ARR;
-	int Up = 1;
+	int Updown_Mode = MODE_1_UP_TO_U2_IMAGE_VEL_1;//first up stage add by zhanglei 0110
 
 	temporary_init_route_list();
 	
@@ -164,14 +166,12 @@ static void *Route_Task_Thread_Func(void * arg)
 		/* ---------------------- END -------------------------- */		
 
 
+//Need Add image data
 
-
-	
-		
 		/* --------------------- START ------------------------- */
-		/* 2.1 aircraft up  */
-		Up = 1;
-		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Up) != 0  )
+		/* 2.1 aircraft up with image to U2*/
+		Updown_Mode = MODE_1_UP_TO_U2_IMAGE_VEL_1;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
 		{
 			goto error;
 		}
@@ -184,7 +184,21 @@ static void *Route_Task_Thread_Func(void * arg)
 		/* ---------------------- END -------------------------- */
 
 
-
+		
+		/* --------------------- START ------------------------- */
+		/* 2.1 aircraft up to U3 ready to cruise*/
+		Updown_Mode = MODE_2_UP_TO_U3;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
+		{
+			goto error;
+		}
+		/* 2.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 2.3 check action if success */
+		//NULL
+		/* ---------------------- END -------------------------- */
 
 
 		
@@ -206,25 +220,11 @@ static void *Route_Task_Thread_Func(void * arg)
 
 
 
-
-
-
-		/* --------------------- START ------------------------- */
-		
-		/* 4. find mark */
-		//												//undefined this pthread
-
-		/* ---------------------- END -------------------------- */
-
-
-
-
-
 		
 		/* --------------------- START ------------------------- */
-		/* 5.1 aircraft down */
-		Up = 0;
-		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Up) != 0  )
+		/* 5.1 aircraft down to GO_DOWN_TO_HEIGHT_H_D3 */
+		Updown_Mode = MODE_3_DOWN_TO_D3;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
 		{
 			goto error;
 		}
@@ -236,14 +236,55 @@ static void *Route_Task_Thread_Func(void * arg)
 		//NULL
 		/* ---------------------- END -------------------------- */
 
-;
 
+//Need Add image data
+
+		/* --------------------- START ------------------------- */
+		
+		/* 4. At D3 height to find mark */
+		//												//undefined this pthread
+
+		/* ---------------------- END -------------------------- */
+
+
+		
+		/* --------------------- START ------------------------- */
+		/* 5.1 aircraft down to GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2 with image */
+		Updown_Mode = MODE_4_DOWN_TO_D2_IMAGE_VEL_N05;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
+		{
+			goto error;
+		}
+		/* 5.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 5.3 check action if success */
+		//NULL
+		/* ---------------------- END -------------------------- */
+
+		
+
+		/* --------------------- START ------------------------- */
+		/* 5.1 aircraft down to D3 */
+		Updown_Mode = MODE_4_DOWN_TO_D2_IMAGE_VEL_N05;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
+		{
+			goto error;
+		}
+		/* 5.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 5.3 check action if success */
+		//NULL
+		/* ---------------------- END -------------------------- */
 
 
 		
 		/* --------------------- START ------------------------- */
 		
-		/* 6. aircraft down use ultrasonic / aircraft land */
+		/* 6. aircraft at D2 ready to landing*/
 		ret = DJI_Pro_Status_Ctrl(6,0);
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);

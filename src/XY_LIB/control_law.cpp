@@ -6,6 +6,9 @@
 #define HOVER_VELOCITY_MIN 		(0.1)
 #define TRANS_TO_HOVER_DIS 		(5.0) 
 
+#define UPDOWN_CTRL_KP			(0.2)
+#define HEIGHT_CTRL_DELTA		(0.5)
+
 extern struct debug_info debug_package;
 extern pthread_mutex_t debug_mutex;
 extern pthread_cond_t debug_cond;
@@ -46,20 +49,36 @@ void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz *pxyz)
 
 }
 
-/*上升段控制*/
-/*
-int XY_Cal_Attitude_Ctrl_Data_Up(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
+/*以指定速度到达指定高度上升下降段控制*/
+
+int XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(api_vel_data_t cvel, api_pos_data_t cpos, float target_vel, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
 {
-	puser_ctrl_data->roll_or_x = 0;
-	puser_ctrl_data->pitch_or_y = 0; 	 
-	double kp_z;
+	
+	static api_pos_data_t epos;	
+	double kp_z=UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
 
-	//Up down cotrol factor, add by zhanglei 1225
-	kp_z=0.2;
+	/*记录当前位置，为目标水平位置*/
+	static int count = 0;	
+	if(count == 0)
+	{
+		epos.longti=cpos.longti;
+		epos.lati=cpos.lati;
+		epos.alti=cpos.alti;
+		epos.height=cpos.height;
+		count++;
+	}
+	
+	//定点控制，但不做高度控制
+	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, epos, epos, epos.height, puser_ctrl_data); //此处epos.height设置的高度值没有意义，不做高度控制
 
-	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //控制的是垂直速度
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height)+target_vel;   //控制的是垂直速度
 
-	if(fabs(t_height - cpos.height) < 0.5)//modified the para, add fabs, by zhanglei 1225
+	//add限幅代码
+
+	//add使用超声波代码
+	
+
+	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
 	{
 		*flag = 1;
 	}
@@ -67,33 +86,36 @@ int XY_Cal_Attitude_Ctrl_Data_Up(api_vel_data_t cvel, api_pos_data_t cpos, float
 	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
 	
 }
-/*
+
 
 /*到达指定高度的上升下降段控制*/
-int XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
+int XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
 {
-	puser_ctrl_data->roll_or_x = 0;
-	puser_ctrl_data->pitch_or_y = 0; 	 
-	double kp_z;
-
-
-	if(t_height == GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1)	//is down
+	static api_pos_data_t epos;	
+	double kp_z=UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+	
+	/*记录当前位置，为目标水平位置*/
+	static int count = 0;	
+	if(count == 0)
 	{
-		/*
-		float _ultra_data;
-		if(XY_Get_Ultra_Data(&_ultra_data) == 0)
-		{
-			XY_Debug_Sprintf(2, "\n[Ultra] %.4f", _ultra_data);
-		}
-		*/
+		epos.longti=cpos.longti;
+		epos.lati=cpos.lati;
+		epos.alti=cpos.alti;
+		epos.height=cpos.height;
+		count++;
 	}
 	
-	//Up down cotrol factor, add by zhanglei 1225
-	kp_z=0.2;
+	//定点控制，但不做高度控制
+	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, epos, epos, epos.height, puser_ctrl_data); //此处epos.height设置的高度值没有意义，不做高度控制
 
 	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //控制的是垂直速度
 
-	if(fabs(t_height - cpos.height) < 0.5)//modified the para, add fabs, by zhanglei 1225
+	//add限幅代码
+
+	//add使用超声波代码
+
+
+	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
 	{
 		*flag = 1;
 	}
