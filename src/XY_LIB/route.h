@@ -24,6 +24,9 @@
 #define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
 #define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
 
+#define UP_TO_HEIGHT_WITH_VEL_AT_END			(1.5)	//m, up is positive +, suggest be same as the vel in next stage
+#define DOWN_TO_HEIGHT_WITH_VEL_AT_END			(-0.5)	//m, down is negtive -, suggest be same as the vel in next stage
+
 #define Ultra_DELTA_UNLOAD 						(0.045) //m£¬ 0110ÊÔÑéÊµ¼Ê°²×°Êý¾Ý
 #define Ultra_DELTA_LOAD						(0.148) //m,ÕÂÀÚ¹À¼ÆÖµ£¬Î´²âÊÔ
 
