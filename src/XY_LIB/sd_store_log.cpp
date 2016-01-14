@@ -2,10 +2,12 @@
 #include "thread_common_op.h"
 #include "image_identify.h"
 #include "range.h"
+#include "route.h"
+#include "control_law.h"
+#include "../DJI_LIB/DJI_Pro_App.h"
 
 
 #define CRLF "\n"
-
 
 sem_t log_ctrl_data_sem;
 sem_t log_start_sem;
@@ -80,6 +82,14 @@ float _log_ultra_data;
 Offset _log_offset;
 api_pos_data_t _log_pos;
 attitude_data_t _log_user_ctrl_data;
+Center_xyz  cur_xyz;
+Body_Angle body_angle;
+api_common_data_t cur_acc;
+api_vel_data_t cur_vo;    
+sdk_std_msg_t cur_broadcast_data;
+
+extern float ultra_buf[ULTRA_ANALYSIS_NUM];
+
 
 
 void store_depend_stat(int _stat, char *strp)
@@ -87,23 +97,41 @@ void store_depend_stat(int _stat, char *strp)
 	switch(_stat)
 	{
 		case 0x01:
-			sprintf(strp, "[ultra_data: %.4f] ", _log_ultra_data);
+			sprintf(strp, "[body_angle- roll_deg: %.4f,pitch_deg : %.4f, yaw_deg %.4f];[cur_acc- agx: %.4f, agy: %.4f, agz%.4f];[cur_vo- vgx: %.4f, vgy: %.4f, vgz%.4f];[cur_w- wx: %.4f, wy: %.4f, wz%.4f];[cur_mag- mx: %.4f, m: %.4f, m%.4f];",      
+                                                                                                               body_angle.roll_deg, body_angle.pitch_deg, body_angle.yaw_deg,
+                                                                                                               cur_acc.x, cur_acc.y, cur_acc.z,
+                                                                                                               cur_vo.x, cur_vo.y, cur_vo.z,
+                                                                                                               cur_broadcast_data.w.x, cur_broadcast_data.w.y, cur_broadcast_data.w.z,
+                                                                                                               cur_broadcast_data.mag.x, cur_broadcast_data.mag.y, cur_broadcast_data.mag.z);
 			break;
 		case 0x02:
-			sprintf(strp, "[offset - x: %.6f, y: %.6f, z: %.6f] ", _log_offset.x, _log_offset.y, _log_offset.z);
-			break;
-		case 0x04:
-			sprintf(strp, "[pos - longti: %.10lf, lati: %.10lf, alti: %.8f, height: %.8f] ", 	_log_pos.longti,
+			sprintf(strp, "[pos - longti: %.10lf, lati: %.10lf, alti: %.8f, height: %.8f, health: %x];", 	_log_pos.longti,
 																								_log_pos.lati,
 																								_log_pos.alti,
-																								_log_pos.height);
+																								_log_pos.height,
+																								_log_pos.health_flag);
 			break;
+			
+		case 0x04:
+			sprintf(strp, "[cur_xyz.x %.3lf, cur_xyz.y %.3lf, cur_xyz.z %.3lf];", 	cur_xyz.x,
+																					cur_xyz.y,
+																					cur_xyz.z);
+			break;
+			
 		case 0x08:
+			break;
+		case 0x10:
 			sprintf(strp, "[ctrl data - pitch: %.f, roll: %f, yaw: %f, thr: %f] ", 	_log_user_ctrl_data.pitch_or_y,
 																					_log_user_ctrl_data.roll_or_x,
 																					_log_user_ctrl_data.yaw,
 																					_log_user_ctrl_data.thr_z);
 			break;
+			
+        case 0x20:
+			sprintf(strp, "[ultra_data: %.4f];", _log_ultra_data);
+			break;
+			
+
 	}
 	int ret = write(log_fd, strp, strlen((const char *)strp));
 	memset(strp, 0, strlen((const char *)strp));
@@ -227,11 +255,18 @@ static void *store_to_log_thread_func(void * arg)
 {	
 
 	int stat = 0;
-
+      
+	api_pos_data_t g_origin_pos;
+	//原点在羽毛球场起飞点
+	g_origin_pos.longti = ORIGIN_IN_HENGSHENG_LONGTI;
+	g_origin_pos.lati = ORIGIN_IN_HENGSHENG_LATI;
+	g_origin_pos.alti = ORIGIN_IN_HENGSHENG_ALTI;
+	XYZ g_origin_XYZ, cur_XYZ;  
+	api_quaternion_data_t cur_quaternion;
 	struct timeval    tv;  
-    struct tm         *tmlocal; 
-
-	char _wbuf[100] = {0};
+	struct tm         *tmlocal; 
+	double dji_time=0;
+	char _wbuf[500] = {0};
 
 	if(log_fd == -1)
 	{
@@ -243,39 +278,54 @@ static void *store_to_log_thread_func(void * arg)
 	{	
 		if(if_log_on() )
 		{
-		
-			if(XY_Get_Ultra_Data(&_log_ultra_data) == 0)
-		   	{
-			   	stat |= 0x01;
-		   	}
-		
-			if( XY_Get_Offset_Data(&_log_offset) == 0)
+#if 0
+			/* sd code should use OFFSET_GET_ID_B */
+			Offset offset;
+			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_B) == 0)
 			{
-				stat |= 0x02;
+				/* ... */
 			}
+#endif
 			
+		
+			DJI_Pro_Get_Quaternion(&cur_quaternion);
+			QUA2ANGLE(cur_quaternion,&body_angle) ;                                                        
+			DJI_Pro_Get_GroundAcc(&cur_acc);  
+			DJI_Pro_Get_GroundVo(&cur_vo);
+			DJI_Pro_Get_Broadcast_Data(&cur_broadcast_data);
+			stat |= 0x01;
+                              
+			stat |= 0x08;
 			DJI_Pro_Get_Pos(&_log_pos);
-			stat |= 0x04;
+			geo2XYZ(_log_pos, &cur_XYZ);
+			XYZ2xyz(g_origin_pos, cur_XYZ, &cur_xyz);
+			stat |= (0x02 | 0x04);
 			
 			if( XY_Get_Attitude_Data(&_log_user_ctrl_data) == 0 )
 			{
-				stat |= 0x08;
+				stat |= 0x10;
 			}
-
+			
+			if(XY_Get_Ultra_Data(&_log_ultra_data, ULTRA_GET_ID_B) == 0)
+		   	{
+			   	stat |= 0x20;
+		   	}
+                              
 			if( gettimeofday(&tv, NULL) != 0)
 			{
 				printf("ERROR get timestamp for log.\n");
 				
 			}
 			tmlocal = localtime(&tv.tv_sec); 
-
+        	dji_time=((float)cur_broadcast_data.time_stamp/600);
 			
-			sprintf(_wbuf, "[%d-%d %d:%d:%d:%6ld] ",	1 + tmlocal->tm_mon,
+			sprintf(_wbuf, "[%d-%d %d:%d:%d:%6ld]; [dji time %6lf];",	1 + tmlocal->tm_mon,
 														tmlocal->tm_mday,
 														tmlocal->tm_hour,
 														tmlocal->tm_min,
 														tmlocal->tm_sec,
-														tv.tv_usec); 
+														tv.tv_usec,
+														dji_time); 
 			
 			int ret = write(log_fd, _wbuf, strlen((const char *)_wbuf));
 			memset(_wbuf, 0, strlen((const char *)_wbuf));
@@ -287,7 +337,9 @@ static void *store_to_log_thread_func(void * arg)
 			check_stat_store(stat, 0x02, _wbuf);
 			check_stat_store(stat, 0x04, _wbuf);
 			check_stat_store(stat, 0x08, _wbuf);
-
+			check_stat_store(stat, 0x10,_wbuf);
+			check_stat_store(stat, 0x20,_wbuf);
+		  
 			add_crlf();
 			
 			stat = 0;

@@ -22,8 +22,8 @@ typedef struct{
 #define THREADS_ULTRA		5
 #define THREADS_ROUTE		6
 #define THREADS_LED			7
-#define THREADS_CHATR		8
-#define THREADS_CHATT		9
+#define THREADS_WAIT_ORDER	8
+#define THREADS_HTTP_POST	9
 #define THREADS_LOG			10
 
 

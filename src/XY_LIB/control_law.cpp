@@ -4,35 +4,52 @@
 #define DT 						(0.02)
 #define HOVER_POINT_RANGE 		(0.1)
 #define HOVER_VELOCITY_MIN 		(0.1)
-#define TRANS_TO_HOVER_DIS 		(5.0) 
+#define TRANS_TO_HOVER_DIS 		(13.0) 
+#define DIS_DIFF_WITH_MARK		(0.20)
+#define MIN_VEL_TO_GET_IMAGE	(0.3)
+#define MIN_ANGLE_TO_GET_IMAGE  (0.1)
+
+
+
 
 #define UPDOWN_CTRL_KP			(0.2)
 #define HEIGHT_CTRL_DELTA		(0.5)
+#define P2P_MAX_ATTITUDE		(10.0)
+#define MAX_CTRL_VEL_UPDOWN_WITH_IMAGE	(0.5)
+#define PI						(3.1415926)
 
 extern struct debug_info debug_package;
 extern pthread_mutex_t debug_mutex;
 extern pthread_cond_t debug_cond;
 
 
-/* 大地->球心 */
+void init_g_origin_pos(api_pos_data_t *_g_origin_pos)
+{
+	_g_origin_pos->longti = ORIGIN_IN_HENGSHENG_LONGTI;
+	_g_origin_pos->lati = ORIGIN_IN_HENGSHENG_LATI;
+	_g_origin_pos->alti = ORIGIN_IN_HENGSHENG_ALTI;
+}
+
+
+/* 麓贸碌脴->脟貌脨脛 */
 void geo2XYZ(api_pos_data_t pos, XYZ *pXYZ)
 {
-	double a = 6378137;				//a为椭球的长半轴:a=6378.137km
-	double b = 6356752.3141;			//b为椭球的短半轴:a=6356.7523141km
+	double a = 6378137;				//a脦陋脥脰脟貌碌脛鲁陇掳毛脰谩:a=6378.137km
+	double b = 6356752.3141;			//b脦陋脥脰脟貌碌脛露脤掳毛脰谩:a=6356.7523141km
 	double H = pos.alti;	//delete"+a"by zhanglei 0108
-	double e = sqrt(1-pow(b ,2)/pow(a ,2));//e为椭球的第一偏心率  
+	double e = sqrt(1-pow(b ,2)/pow(a ,2));//e脦陋脥脰脟貌碌脛碌脷脪禄脝芦脨脛脗脢  
 	double B = pos.lati;
 	double L = pos.longti;
 	double W = sqrt(1-pow(e ,2)*pow(sin(B) ,2));
-	double N = a/W; //N为椭球的卯酉圈曲率半径 
+	double N = a/W; //N脦陋脥脰脟貌碌脛脙庐脫脧脠娄脟煤脗脢掳毛戮露 
 	
 	pXYZ->x = (N+H)*cos(B)*cos(L);
 	pXYZ->y = (N+H)*cos(B)*sin(L);
 	pXYZ->z = (N*(1-pow(e ,2))+H)*sin(B);
 }
 
-/*球心->站心 add by zhanglei, 20151224*/
-/*此转换算法x轴向北，y轴向东*/
+/*脟貌脨脛->脮戮脨脛 add by zhanglei, 20151224*/
+/*麓脣脳陋禄禄脣茫路篓x脰谩脧貌卤卤拢卢y脰谩脧貌露芦*/
 void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz *pxyz)
 {  	
 	XYZ s_XYZ, temp_XYZ;
@@ -49,32 +66,128 @@ void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz *pxyz)
 
 }
 
+/*Trans current quaternion to angle*/
+void QUA2ANGLE(api_quaternion_data_t cur_quaternion, Body_Angle *body_angle) 
+{
 
-/*以指定速度到达指定高度上升下降段控制*/
+	body_angle->roll_deg= 180/PI*atan2(2*(cur_quaternion.q0*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q3),1-2*(cur_quaternion.q1*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q2));
+	body_angle->pitch_deg= 180/PI*asin(2*(cur_quaternion.q0*cur_quaternion.q2-cur_quaternion.q3*cur_quaternion.q1));
+	body_angle->yaw_deg= 180/PI*atan2(2*(cur_quaternion.q0*cur_quaternion.q3+cur_quaternion.q1*cur_quaternion.q2),1-2*(cur_quaternion.q2*cur_quaternion.q2+cur_quaternion.q3*cur_quaternion.q3));
+}
 
-int XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(api_vel_data_t cvel, api_pos_data_t cpos, float target_vel, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
+
+/*get down to a certain height with IMAGE and have velocity at the end*/
+int XY_Cal_Attitude_Ctrl_Data_Down_To_Height_WithVel_IMAGE(	api_vel_data_t cvel, 
+														api_pos_data_t cpos,
+														api_pos_data_t _focus_point,
+														float target_vel, 
+														float t_height,
+														attitude_data_t *puser_ctrl_data,
+														int *flag)
 {
 	
-	static api_pos_data_t epos;	
-	double kp_z=UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+	
+	//露篓碌茫驴脴脰脝拢卢碌芦虏禄脳枚赂脽露脠驴脴脰脝
+	XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(cvel, cpos, puser_ctrl_data); //麓脣麓娄epos.height脡猫脰脙碌脛赂脽露脠脰碌脙禄脫脨脪芒脪氓拢卢虏禄脳枚赂脽露脠驴脴脰脝
 
-	/*记录当前位置，为目标水平位置*/
-	static int count = 0;	
-	if(count == 0)
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //驴脴脰脝碌脛脢脟麓鹿脰卤脣脵露脠
+
+	if(fabs(puser_ctrl_data->thr_z) < fabs(target_vel))  //卤拢鲁脰脛漏露脣碌脛脣脵露脠拢卢add 0111 by zhanglei
 	{
-		epos.longti=cpos.longti;
-		epos.lati=cpos.lati;
-		epos.alti=cpos.alti;
-		epos.height=cpos.height;
-		count++;
+		puser_ctrl_data->thr_z = target_vel;
+//		printf("%.f, %.f",puser_ctrl_data->thr_z, target_vel);
+	}
+
+#if 1
+	//add脧脼路霉麓煤脗毛
+	if(puser_ctrl_data->thr_z > 1.0)		//modified from 2 to 1 by zhanglei 0111
+	{
+		puser_ctrl_data->thr_z = 1.0;
+	}
+	else if(puser_ctrl_data->thr_z < (-1.0) )
+	{
+		puser_ctrl_data->thr_z = -1.0;
 	}
 	
-	//定点控制，但不做高度控制
-	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, epos, epos, epos.height, puser_ctrl_data); //此处epos.height设置的高度值没有意义，不做高度控制
+#endif	
+	//add脢鹿脫脙鲁卢脡霉虏篓麓煤脗毛
+	
 
-	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height)+target_vel;   //控制的是垂直速度
+	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
+	{
+		*flag = 1;
+	}
 
-	//add限幅代码
+	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
+	
+}
+
+
+/*up to certain height with velocity at the end*/
+int XY_Cal_Attitude_Ctrl_Data_Up_To_Height_WithVel(	api_vel_data_t cvel, 
+														api_pos_data_t cpos,
+														api_pos_data_t _focus_point,
+														float target_vel, 
+														float t_height,
+														attitude_data_t *puser_ctrl_data,
+														int *flag)
+{
+	
+	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+	
+	//in up mode, use the Fix point control without IMAGE info, FP not control the height, the height ctrl is done in this func
+	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, _focus_point, _focus_point, -1, puser_ctrl_data); //not ctrl height
+
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //驴脴脰脝碌脛脢脟麓鹿脰卤脣脵露脠
+
+	if(fabs(puser_ctrl_data->thr_z) < fabs(target_vel))  //卤拢鲁脰脛漏露脣碌脛脣脵露脠拢卢add 0111 by zhanglei
+	{
+		puser_ctrl_data->thr_z = target_vel;
+//		printf("%.f, %.f",puser_ctrl_data->thr_z, target_vel);
+	}
+
+#if 1
+	//add脧脼路霉麓煤脗毛
+	if(puser_ctrl_data->thr_z > 1.0)		//modified from 2 to 1 by zhanglei 0111
+	{
+		puser_ctrl_data->thr_z = 1.0;
+	}
+	else if(puser_ctrl_data->thr_z < (-1.0) )
+	{
+		puser_ctrl_data->thr_z = -1.0;
+	}
+	
+#endif	
+	//add脢鹿脫脙鲁卢脡霉虏篓麓煤脗毛
+	
+
+	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
+	{
+		*flag = 1;
+	}
+
+	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
+	
+}
+
+
+/*up down to fix height with no velocity at the end*/
+int XY_Cal_Attitude_Ctrl_Data_UpDown_TO_Height(	api_vel_data_t cvel,
+												api_pos_data_t cpos,
+												api_pos_data_t _focus_point,
+												float t_height,
+												attitude_data_t *puser_ctrl_data,
+												int *flag)
+{
+	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+	
+	//露篓碌茫驴脴脰脝拢卢碌芦虏禄脳枚赂脽露脠驴脴脰脝
+	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, _focus_point, _focus_point, -1, puser_ctrl_data); //麓脣麓娄epos.height脡猫脰脙碌脛赂脽露脠脰碌脙禄脫脨脪芒脪氓拢卢虏禄脳枚赂脽露脠驴脴脰脝
+
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height); 
+
+	//add脧脼路霉麓煤脗毛
 	if(puser_ctrl_data->thr_z > 2.0)
 	{
 		puser_ctrl_data->thr_z = 2.0;
@@ -83,51 +196,7 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(api_vel_data_t cvel, api_pos_d
 	{
 		puser_ctrl_data->thr_z = -2.0;
 	}
-	//add使用超声波代码
-	
-
-	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
-	{
-		*flag = 1;
-	}
-
-	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
-	
-}
-
-
-/*到达指定高度的上升下降段控制*/
-int XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(api_vel_data_t cvel, api_pos_data_t cpos, float t_height, attitude_data_t *puser_ctrl_data, int *flag)
-{
-	static api_pos_data_t epos;	
-	double kp_z=UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
-	
-	/*记录当前位置，为目标水平位置*/
-	static int count = 0;	
-	if(count == 0)
-	{
-		epos.longti=cpos.longti;
-		epos.lati=cpos.lati;
-		epos.alti=cpos.alti;
-		epos.height=cpos.height;
-		count++;
-	}
-	
-	//定点控制，但不做高度控制
-	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, epos, epos, epos.height, puser_ctrl_data); //此处epos.height设置的高度值没有意义，不做高度控制
-
-	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //鎺у埗鐨勬槸鍨傜洿閫熷害
-
-	//add限幅代码
-	if(puser_ctrl_data->thr_z > 2.0)
-	{
-		puser_ctrl_data->thr_z = 2.0;
-	}
-	else if(puser_ctrl_data->thr_z < (-2.0) )
-	{
-		puser_ctrl_data->thr_z = -2.0;
-	}
-	//add使用超声波代码
+	//add脢鹿脫脙鲁卢脡霉虏篓麓煤脗毛
 
 
 	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
@@ -135,18 +204,25 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(api_vel_data_t cvel, api_pos_data_t cp
 		*flag = 1;
 	}
 
-	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
+	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
 
 }
 
 
 
-int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, float height, Leg_Node *p_legn, attitude_data_t *puser_ctrl_data, int *flag)
+
+int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel, 
+									api_pos_data_t cpos, 
+									float height, 
+									Leg_Node *p_legn,
+									attitude_data_t *puser_ctrl_data,
+									int *flag)
 {
 	double k1d, k1p, k2d, k2p;
 	static api_pos_data_t epos, spos;	
 	static XYZ eXYZ, cXYZ;
 	static Center_xyz exyz, cxyz;
+	api_pos_data_t g_origin_pos;
 	static int count = 0;
 	double last_distance_xyz = 0.0;
 	volatile double thetaC, phiC;
@@ -154,15 +230,17 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 	char msg[100];
 	static int i = 0;
 
-
-/*	//跟踪点控制参数, last modified by zhanglei, 1222
+	//set the origin with Longti&Lati
+	init_g_origin_pos(&g_origin_pos);
+	
+/*	//赂煤脳脵碌茫驴脴脰脝虏脦脢媒, last modified by zhanglei, 1222
 	k1d=0.5;
-	k1p=1;		//1222 by zhanglei 调整增加10倍，飞行测试ok，之前为仿真ok的参数0.1
+	k1p=1;		//1222 by zhanglei 碌梅脮没脭枚录脫10卤露拢卢路脡脨脨虏芒脢脭ok拢卢脰庐脟掳脦陋路脗脮忙ok碌脛虏脦脢媒0.1
 	k2d=0.5;
-	k2p=1;		//1222 by zhanglei 调整增加10倍，飞行测试ok，之前为仿真ok的参数0.1
+	k2p=1;		//1222 by zhanglei 碌梅脮没脭枚录脫10卤露拢卢路脡脨脨虏芒脢脭ok拢卢脰庐脟掳脦陋路脗脮忙ok碌脛虏脦脢媒0.1
 */
 	
-	if(count == 0)
+	if(count == 0 || count == 2)
 	{
 		epos.longti = p_legn->leg.end._longti;
 		epos.lati = p_legn->leg.end._lati;
@@ -175,64 +253,100 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t cvel, api_pos_data_t cpos, floa
 		count++;
 	}
 
-	//从大地坐标系转换到球心坐标系
+	//麓脫麓贸碌脴脳酶卤锚脧碌脳陋禄禄碌陆脟貌脨脛脳酶卤锚脧碌
 	geo2XYZ(epos, &eXYZ);
 	geo2XYZ(cpos, &cXYZ);
-	//从球心坐标系转到站心坐标系add by zhanglei, 1225;
+	//use origin as the center to transfer, the same as start
+	//XYZ2xyz(g_origin_pos, eXYZ, &exyz);
+	//XYZ2xyz(g_origin_pos, cXYZ, &cxyz);
 	XYZ2xyz(spos, eXYZ, &exyz);
 	XYZ2xyz(spos, cXYZ, &cxyz);
 
-	//站心坐标系的控制参数add by zhanglei, 1225;
+	exyz.x -= DELTA_X_M_GOOGLEEARTH;
+	exyz.y -= DELTA_Y_M_GOOGLEEARTH;
+	exyz.z -= DELTA_Z_M_GOOGLEEARTH;
+
+	//脮戮脨脛脳酶卤锚脧碌碌脛驴脴脰脝虏脦脢媒add by zhanglei, 1225;
 	k1d=0.5;
 	k1p=1;		
 	k2d=0.5;
 	k2p=1;	
 
-	//站心坐标系下进行姿态控制add by zhanglei, 1225;
+	//脮戮脨脛脳酶卤锚脧碌脧脗陆酶脨脨脳脣脤卢驴脴脰脝add by zhanglei, 1225;
 	thetaC= k1p*(cxyz.x-exyz.x)+k1d*cvel.x;
 	phiC=-k2p*(cxyz.y-exyz.y)-k2d*cvel.y;
 
+	//脧脼路霉
+	if(thetaC>P2P_MAX_ATTITUDE)
+	{
+		thetaC=P2P_MAX_ATTITUDE;
+	}
+	else if(thetaC<(-1)*P2P_MAX_ATTITUDE)
+	{
+		thetaC=(-1)*P2P_MAX_ATTITUDE;
+	}
+
+	if(phiC>P2P_MAX_ATTITUDE)
+	{
+		phiC=P2P_MAX_ATTITUDE;
+	}
+	else if(phiC<(-1)*P2P_MAX_ATTITUDE)
+	{
+		phiC=(-1)*P2P_MAX_ATTITUDE;
+	}
+
+
 /*	
-	//在球心坐标系下跟踪点姿态控制, add by zhanglei, 1224; simulated 1225am ok by zl.
-    thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//期望的俯仰角 XYZ球心坐标系，Z轴North+,+thetaC_pitch产生South速递
-	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//期望的滚转角 XYZ球心坐标系，X轴West+, +phiC_roll产生East速度
+	//脭脷脟貌脨脛脳酶卤锚脧碌脧脗赂煤脳脵碌茫脳脣脤卢驴脴脰脝, add by zhanglei, 1224; simulated 1225am ok by zl.
+    thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//脝脷脥没碌脛赂漏脩枚陆脟 XYZ脟貌脨脛脳酶卤锚脧碌拢卢Z脰谩North+,+thetaC_pitch虏煤脡煤South脣脵碌脻
+	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//脝脷脥没碌脛鹿枚脳陋陆脟 XYZ脟貌脨脛脳酶卤锚脧碌拢卢X脰谩West+, +phiC_roll虏煤脡煤East脣脵露脠
 */
 
-	puser_ctrl_data->ctrl_flag=0x00;//垂直速度，水平姿态，航向角度控制模式
-	puser_ctrl_data->roll_or_x = phiC;			//滚转角.机体x轴。按照目前 Ground坐标系，产生y轴速度
-	puser_ctrl_data->pitch_or_y = thetaC;		//俯仰角.机体y轴。按照目前 Ground坐标系，产生-x轴速度
-	puser_ctrl_data->thr_z =  height - cpos.height;   // 高度单位负反馈控制，后期可调整反馈系数优化性能 -z 
+	puser_ctrl_data->ctrl_flag=0x00;//麓鹿脰卤脣脵露脠拢卢脣庐脝陆脳脣脤卢拢卢潞陆脧貌陆脟露脠驴脴脰脝脛拢脢陆
+	puser_ctrl_data->roll_or_x = phiC;			//鹿枚脳陋陆脟.禄煤脤氓x脰谩隆拢掳麓脮脮脛驴脟掳 Ground脳酶卤锚脧碌拢卢虏煤脡煤y脰谩脣脵露脠
+	puser_ctrl_data->pitch_or_y = thetaC;		//赂漏脩枚陆脟.禄煤脤氓y脰谩隆拢掳麓脮脮脛驴脟掳 Ground脳酶卤锚脧碌拢卢虏煤脡煤-x脰谩脣脵露脠
+	puser_ctrl_data->thr_z =  height - cpos.height;   // 赂脽露脠碌楼脦禄赂潞路麓脌隆驴脴脰脝拢卢潞贸脝脷驴脡碌梅脮没路麓脌隆脧碌脢媒脫脜禄炉脨脭脛脺 -z 
 	puser_ctrl_data->yaw = 0;
 
-//	last_distance=sqrt(pow((-1)*(cXYZ.x- eXYZ.x), 2)+pow((cXYZ.z-eXYZ.z), 2));//X轴在东半球向西为正，在x轴增加负号
+//	last_distance=sqrt(pow((-1)*(cXYZ.x- eXYZ.x), 2)+pow((cXYZ.z-eXYZ.z), 2));//X脰谩脭脷露芦掳毛脟貌脧貌脦梅脦陋脮媒拢卢脭脷x脰谩脭枚录脫赂潞潞脜
 
 	last_distance_xyz=sqrt(pow((cxyz.x- exyz.x), 2)+pow((cxyz.y-exyz.y), 2));
 
 #if 0
-		printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//x轴在东半球向西为正，在x轴增加负号
+		//printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//x脰谩脭脷露芦掳毛脟貌脧貌脦梅脦陋脮媒拢卢脭脷x脰谩脭枚录脫赂潞潞脜
+		printf("Dis: %lf\n", last_distance_xyz);
+		printf("End Long, Lat--> %.9lf.\t%.9lf.\t\n",epos.longti,epos.lati);
+		
 #endif
 	
-	if(last_distance_xyz < 5)
+	if(last_distance_xyz < TRANS_TO_HOVER_DIS)
 	{
 		*flag = XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, spos, epos, height, puser_ctrl_data);
-		count = 0;
+		if(*flag == 1)
+		{
+			count = 2;
+		}
+		//count = 0;
 	}
 
+#if 0
+	FP_With_IMAGE();	//test transfer, DELETE after test
+#endif
 
-	XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
-	XY_Debug_Sprintf(1, "[XYZ] %.8lf, %.8lf.\n", (cxyz.x- exyz.x), (cxyz.y-exyz.y));
+	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
+	//XY_Debug_Sprintf(1, "[XYZ] %.8lf, %.8lf.\n", (cxyz.x- exyz.x), (cxyz.y-exyz.y));
 	
 }
 
 
-/*=====定点悬停控制============*/
+/*=====露篓碌茫脨眉脥拢驴脴脰脝============*/
 /*Author: zhanglei
 /*Create:2015-12-23
 /*Last Modify: 2015-12-24 by zhanglei
-/*Input: 当前速度，当前经纬度
-/*		站心经纬度，目标经纬度
-/*		返回控制量指针
-/*Output: 状态
+/*Input: 碌卤脟掳脣脵露脠拢卢碌卤脟掳戮颅脦鲁露脠
+/*		脮戮脨脛戮颅脦鲁露脠拢卢脛驴卤锚戮颅脦鲁露脠
+/*		路碌禄脴驴脴脰脝脕驴脰赂脮毛
+/*Output: 脳麓脤卢
 =================================*/
 int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t spos, api_pos_data_t tpos, float height, attitude_data_t *puser_ctrl_data)
 {
@@ -243,46 +357,55 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	double last_velocity=0.0;
 	static XYZ tXYZ, txyz, cXYZ, cxyz, sXYZ,sxyz;
 
-	//从大地坐标系转换到球心坐标系
+	//麓脫麓贸碌脴脳酶卤锚脧碌脳陋禄禄碌陆脟貌脨脛脳酶卤锚脧碌
 	geo2XYZ(tpos, &tXYZ);
 	geo2XYZ(cpos,&cXYZ);
 
-	//从球心坐标系转换到站心坐标系
+	//麓脫脟貌脨脛脳酶卤锚脧碌脳陋禄禄碌陆脮戮脨脛脳酶卤锚脧碌
 	XYZ2xyz(spos, cXYZ, &cxyz);
 	XYZ2xyz(spos, tXYZ, &txyz);
 
-	//1225下午仿真结果参数，by zhanglei ok, 1227飞行参数ok
+	//txyz.x -= DELTA_X_M_GOOGLEEARTH;
+	//txyz.y -= DELTA_Y_M_GOOGLEEARTH;
+	//txyz.z -= DELTA_Z_M_GOOGLEEARTH;
+
+	//1225脧脗脦莽路脗脮忙陆谩鹿没虏脦脢媒拢卢by zhanglei ok, 1227路脡脨脨虏脦脢媒ok
 	k1d=0.05;
 	k1p=0.4;	
 	k2d=0.05;
 	k2p=0.4;	
 
-	x_n_vel = -k1p*(cxyz.x-txyz.x)-k1d*(cvel.x);//xyz站心坐标系，x轴北向正
-	y_e_vel = -k2p*(cxyz.y-txyz.y)-k2d*(cvel.y);//xyz站心坐标系，y轴东向正
+	x_n_vel = -k1p*(cxyz.x-txyz.x)-k1d*(cvel.x);//xyz脮戮脨脛脳酶卤锚脧碌拢卢x脰谩卤卤脧貌脮媒
+	y_e_vel = -k2p*(cxyz.y-txyz.y)-k2d*(cvel.y);//xyz脮戮脨脛脳酶卤锚脧碌拢卢y脰谩露芦脧貌脮媒
 
-	puser_ctrl_data->ctrl_flag=0x40;//垂直速度，水平速度，航向角度控制模式
-	puser_ctrl_data->roll_or_x = x_n_vel;			//x北向期望速度
-	puser_ctrl_data->pitch_or_y = y_e_vel;		//y东向期望速度
-	puser_ctrl_data->thr_z =  height - cpos.height;   // 高度单位负反馈控制，后期可调整反馈系数优化性能 
+	puser_ctrl_data->ctrl_flag=0x40;//麓鹿脰卤脣脵露脠拢卢脣庐脝陆脣脵露脠拢卢潞陆脧貌陆脟露脠驴脴脰脝脛拢脢陆
+	puser_ctrl_data->roll_or_x = x_n_vel;			//x卤卤脧貌脝脷脥没脣脵露脠
+	puser_ctrl_data->pitch_or_y = y_e_vel;		//y露芦脧貌脝脷脥没脣脵露脠
+
+	if(height >= 0)
+		puser_ctrl_data->thr_z =  height - cpos.height;   // 赂脽露脠碌楼脦禄赂潞路麓脌隆驴脴脰脝拢卢潞贸脝脷驴脡碌梅脮没路麓脌隆脧碌脢媒脫脜禄炉脨脭脛脺 
 
 	last_distance_xyz=sqrt(pow((cxyz.x- txyz.x), 2)+pow((cxyz.y-txyz.y), 2));
 
 #if 0
-	printf("HoverDis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- txyz.x),(cxyz.y-txyz.y));
+	//printf("HoverDis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- txyz.x),(cxyz.y-txyz.y));
+	printf("last_dis: %lf\n", last_distance_xyz);
+	printf("FP  End Long, Lat--> .\t%.9lf.\t%.9lf.\t\n",tpos.longti,tpos.lati);
+
 #endif
 
 	if(last_distance_xyz < HOVER_POINT_RANGE)
 	{
-		//printf("HoverVel--> X:%.8lf, Y:%.8lf\n",cvel.x,cvel.y);
-		puser_ctrl_data->roll_or_x = 0;			//x北向期望速度
-		puser_ctrl_data->pitch_or_y = 0;		//y东向期望速度		
+//		printf("Ctrl--> X:%.10lf, Y:%.10lf\n",puser_ctrl_data->roll_or_x,puser_ctrl_data->pitch_or_y);
+//		puser_ctrl_data->roll_or_x = 0;			//x卤卤脧貌脝脷脥没脣脵露脠
+//		puser_ctrl_data->pitch_or_y = 0;		//y露芦脧貌脝脷脥没脣脵露脠		
 
 		last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
+		//printf("last vel%lf\n", last_velocity);
 
-		if(last_velocity < HOVER_VELOCITY_MIN)
+		if(fabs(last_velocity) < HOVER_VELOCITY_MIN)
 		{
-			
-			//XY_Cal_Vel_Ctrl_Data_Image(cpos.height);	//offset+四元数+高度(cpos.height)
+			//XY_Cal_Vel_Ctrl_Data_Image(cpos.height);	//offset+脣脛脭陋脢媒+赂脽露脠(cpos.height)
 			return 1;
 		}
 	}
@@ -290,26 +413,344 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	
 }
 
+
+
+
+//Hover in point with IMAGE
+void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos, float height, attitude_data_t *puser_ctrl_data,int *flag)
+{
+	double k1d, k1p, k2d, k2p;
+	api_quaternion_data_t cur_quaternion;
+	float yaw_angle;
+    float roll_angle,roll_rard;
+    float pitch_angle,pitch_rard;
+	static Offset offset,offset_adjust;
+	float x_camera_diff_with_roll;
+	float y_camera_diff_with_pitch;
+	double y_e_vel, x_n_vel;
+	static float last_dis_to_mark,last_velocity;
+	XYZ	cXYZ;
+	static Center_xyz cur_target_xyz;
+	Center_xyz cxyz;
+	static api_pos_data_t target_origin_pos;
+	static int target_update=0;
+	static int count=0;
+	
+	
+	DJI_Pro_Get_Quaternion(&cur_quaternion);
+
+	roll_rard = atan2(2*(cur_quaternion.q0*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q3),1-2*(cur_quaternion.q1*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q2));
+	pitch_rard= asin(2*(cur_quaternion.q0*cur_quaternion.q2-cur_quaternion.q3*cur_quaternion.q1));
+	yaw_angle = 180/PI*atan2(2*(cur_quaternion.q0*cur_quaternion.q3+cur_quaternion.q1*cur_quaternion.q2),1-2*(cur_quaternion.q2*cur_quaternion.q2+cur_quaternion.q3*cur_quaternion.q3));
+
+	roll_angle = 180/PI*roll_rard;
+	pitch_angle = 180/PI*pitch_rard;
+
+	//the first time give the origin point
+	if(count == 0 || count == 2)
+	{
+		target_origin_pos=cpos;
+		cur_target_xyz.x=0;
+		cur_target_xyz.y=0;
+		count++;
+	}
+	
+
+	//steady enough, ready to get image,set new target
+	if (sqrt(cvel.x*cvel.x+cvel.y*cvel.y) < MIN_VEL_TO_GET_IMAGE && roll_angle < MIN_ANGLE_TO_GET_IMAGE && pitch_angle < MIN_ANGLE_TO_GET_IMAGE || target_update == 1)
+	{		
+
+		if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
+		{
+			
+			// modified to "Meter", raw data from image process is "cm"
+			offset.x = offset.x/100;
+			offset.y = offset.y/100;
+			offset.z = offset.z/100;
+
+
+			//modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
+			x_camera_diff_with_roll =cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
+			y_camera_diff_with_pitch = cpos.height * tan(pitch_rard);// modified to use the Height not use offset.z by zl, 0113
+		
+			offset_adjust.x = offset.x - x_camera_diff_with_roll;
+			offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+	
+			//check if close enough to the image target
+			if(sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK)
+			{
+				last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
+				
+				if(last_velocity < HOVER_VELOCITY_MIN)
+				{
+					cur_target_xyz.x=0;
+					cur_target_xyz.y=0;
+					cur_target_xyz.z=0;
+					
+					*flag=1;
+					count = 2;
+					return;
+				}
+					
+			}
+
+		//trans to get the xyz coordination
+		target_origin_pos=cpos;
+		
+		//set the target with the image target with xyz
+		cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
+		cur_target_xyz.y =  offset_adjust.x; //add east offset	
+		
+		target_update=1;
+		
+		
+		//printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+	}
+	/*
+	else		//if not steady enough, then control the vel to zero, set target to zero
+	{
+		cur_target_xyz.x=0;
+		cur_target_xyz.y=0;
+		cur_target_xyz.z=0;
+	}
+	*/
+
+		//hover para the same as the FP
+		k1d=0.05;
+		k1p=0.05;	//0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1
+		k2d=0.05;
+		k2p=0.05;		
+
+		//use the origin updated last time "target_origin_pos", to get the current cxyz
+		geo2XYZ(cpos,&cXYZ);
+		XYZ2xyz(target_origin_pos, cXYZ, &cxyz);		
+
+		//use the xyz coordination to get the target, the same as the FP control		
+		x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(cvel.x);
+		y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(cvel.y);
+		
+		//x_n_vel = -k1p*(-1)*(offset_adjust.y)-k1d*(cvel.x);  	//camera y is to the south when DJI head focus north
+		//y_e_vel = -k2p*(offset_adjust.x)-k2d*(cvel.y);	//camera x is to the east when DJI head focus north
+
+		puser_ctrl_data->ctrl_flag=0x40;//麓鹿脰卤脣脵露脠拢卢脣庐脝陆脣脵露脠拢卢潞陆脧貌陆脟露脠驴脴脰脝脛拢脢陆
+		puser_ctrl_data->roll_or_x = x_n_vel;			//x卤卤脧貌脝脷脥没脣脵露脠
+		puser_ctrl_data->pitch_or_y = y_e_vel;		//y露芦脧貌脝脷脥没脣脵露脠
+
+		if(height >= 0)
+			puser_ctrl_data->thr_z =  height - cpos.height;   // 赂脽露脠碌楼脦禄赂潞路麓脌隆驴脴脰脝拢卢潞贸脝脷驴脡碌梅脮没路麓脌隆脧碌脢媒脫脜禄炉脨脭脛脺 
+
+		last_dis_to_mark=sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
+		//last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
+		
+		if (last_dis_to_mark < HOVER_POINT_RANGE)
+			target_update=0;
+		
+	}
+	else
+	{
+		puser_ctrl_data->roll_or_x = 0;
+		puser_ctrl_data->pitch_or_y = 0;
+		if(height >= 0)
+			puser_ctrl_data->thr_z =  height - cpos.height;
+	}
 /*
-	获取超声波数据的方式
+		if (last_dis_to_mark < DIS_DIFF_WITH_MARK)
+		{
+
+			last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
+			
+			if(last_velocity < HOVER_VELOCITY_MIN)
+			{
+				//update_cur_legn_data(cpos.longti, cpos.lati);
+				*flag=1;
+			}
+			
+		}
+*/
+
+	
+
+}
+
+/* define in route.cpp */
+extern int drone_goback;
+
+void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos, attitude_data_t *puser_ctrl_data)
+{
+
+	double k1d, k1p, k2d, k2p;
+	api_quaternion_data_t cur_quaternion;
+	float yaw_angle;
+    float roll_angle,roll_rard;
+    float pitch_angle,pitch_rard;
+	static Offset offset,offset_adjust;
+	float x_camera_diff_with_roll;
+	float y_camera_diff_with_pitch;
+	double y_e_vel, x_n_vel;
+	static float last_dis_to_mark,last_velocity;
+	XYZ	cXYZ;
+	static Center_xyz cur_target_xyz;
+	Center_xyz cxyz;
+	static api_pos_data_t target_origin_pos;
+	static int target_update=0;
+	static int count=0;
+	
+	
+	DJI_Pro_Get_Quaternion(&cur_quaternion);
+
+	roll_rard = atan2(2*(cur_quaternion.q0*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q3),1-2*(cur_quaternion.q1*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q2));
+	pitch_rard= asin(2*(cur_quaternion.q0*cur_quaternion.q2-cur_quaternion.q3*cur_quaternion.q1));
+	yaw_angle = 180/PI*atan2(2*(cur_quaternion.q0*cur_quaternion.q3+cur_quaternion.q1*cur_quaternion.q2),1-2*(cur_quaternion.q2*cur_quaternion.q2+cur_quaternion.q3*cur_quaternion.q3));
+
+	roll_angle = 180/PI*roll_rard;
+	pitch_angle = 180/PI*pitch_rard;
+
+	//the first time give the origin point
+	if(count==0 || drone_goback == 1)
+	{
+		target_origin_pos=cpos;
+		cur_target_xyz.x=0;
+		cur_target_xyz.y=0;
+		drone_goback++;
+		count++;
+	}
+
+	//steady enough, ready to get image,set new target
+	if (sqrt(cvel.x*cvel.x+cvel.y*cvel.y) < MIN_VEL_TO_GET_IMAGE && roll_angle < MIN_ANGLE_TO_GET_IMAGE && pitch_angle < MIN_ANGLE_TO_GET_IMAGE || target_update == 1)
+	{		
+
+		if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
+		{
+			
+			// modified to "Meter", raw data from image process is "cm"
+			offset.x = offset.x/100;
+			offset.y = offset.y/100;
+			offset.z = offset.z/100;
+
+
+			//modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
+			x_camera_diff_with_roll =cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
+			y_camera_diff_with_pitch = cpos.height * tan(pitch_rard);// modified to use the Height not use offset.z by zl, 0113
+		
+			offset_adjust.x = offset.x - x_camera_diff_with_roll;
+			offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+	
+			//check if close enough to the image target
+			if(sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK)
+			{
+				last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
+				
+				if(last_velocity < HOVER_VELOCITY_MIN)
+				{
+					cur_target_xyz.x=0;
+					cur_target_xyz.y=0;
+					cur_target_xyz.z=0;
+				}
+					
+			}
+
+		//trans to get the xyz coordination
+		target_origin_pos=cpos;
+		
+		//set the target with the image target with xyz
+		cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
+		cur_target_xyz.y =  offset_adjust.x; //add east offset	
+		
+		target_update=1;
+		
+		
+		printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+		}
+	/*
+	else		//if not steady enough, then control the vel to zero, set target to zero
+	{
+		cur_target_xyz.x=0;
+		cur_target_xyz.y=0;
+		cur_target_xyz.z=0;
+	}
+	*/
+
+		//hover para the same as the FP
+		k1d=0.05;
+		k1p=0.05;	//simulation test 0113;adjust to 0.05,flight test ok 0114
+		k2d=0.05;
+		k2p=0.05;		
+
+		//use the origin updated last time "target_origin_pos", to get the current cxyz
+		geo2XYZ(cpos,&cXYZ);
+		XYZ2xyz(target_origin_pos, cXYZ, &cxyz);		
+
+		//use the xyz coordination to get the target, the same as the FP control		
+		x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(cvel.x);
+		y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(cvel.y);
+
+		//lower the x y control
+		if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		{
+			x_n_vel=MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+		}else if (x_n_vel < (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		{
+			x_n_vel= (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+		}
+
+		if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		{
+			y_e_vel=MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+		}else if (y_e_vel < (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		{
+			y_e_vel= (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+		}
+
+		
+		//printf("Ctrl_X, Y-->.\t.\t%f.\t%f\n", x_n_vel,y_e_vel);
+
+		
+		//x_n_vel = -k1p*(-1)*(offset_adjust.y)-k1d*(cvel.x);  	//camera y is to the south when DJI head focus north
+		//y_e_vel = -k2p*(offset_adjust.x)-k2d*(cvel.y);	//camera x is to the east when DJI head focus north
+
+		puser_ctrl_data->ctrl_flag=0x40;//麓鹿脰卤脣脵露脠拢卢脣庐脝陆脣脵露脠拢卢潞陆脧貌陆脟露脠驴脴脰脝脛拢脢陆
+		puser_ctrl_data->roll_or_x = x_n_vel;			//x卤卤脧貌脝脷脥没脣脵露脠
+		puser_ctrl_data->pitch_or_y = y_e_vel;		//y露芦脧貌脝脷脥没脣脵露脠
+
+		last_dis_to_mark=sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
+		//last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
+		
+		if (last_dis_to_mark < HOVER_POINT_RANGE)
+			target_update=0;
+		
+	}
+	else
+	{
+		puser_ctrl_data->roll_or_x = 0;
+		puser_ctrl_data->pitch_or_y = 0;
+	}
+
+}
+
+
+
+/*
+	禄帽脠隆鲁卢脡霉虏篓脢媒戮脻碌脛路陆脢陆
 
 	float data;
 	if(XY_Get_Ultra_Data(&data) == 0)
    	{
-		获取的数据有效
-		可以对data进行分析
+		禄帽脠隆碌脛脢媒戮脻脫脨脨搂
+		驴脡脪脭露脭data陆酶脨脨路脰脦枚
    	}
 
-	获取姿态四元数
+	禄帽脠隆脳脣脤卢脣脛脭陋脢媒
 	api_quaternion_data_t cur_quaternion;
 	DJI_Pro_Get_Quaternion(&cur_quaternion);
 
-	获取图像offset
+	禄帽脠隆脥录脧帽offset
 	Offset offset;
-	if( XY_Get_Offset_Data(&offset) == 0)	//返回0表示数据有效
+	if( XY_Get_Offset_Data(&offset) == 0)	//路碌禄脴0卤铆脢戮脢媒戮脻脫脨脨搂
 			printf("Get Offset - x:%.4f, y:%.4f, z:%.3f\n", offset.x, offset.y, offset.z);
 
-	打开/关闭摄像头
+	麓貌驴陋/鹿脴卤脮脡茫脧帽脥路
 	XY_Start_Capture();
 	XY_Stop_Capture();
 

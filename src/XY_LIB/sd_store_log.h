@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <math.h>
 #include "../DJI_LIB/DJI_Pro_App.h"
 
 

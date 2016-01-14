@@ -8,7 +8,7 @@
 #include "opencv2/video/tracking.hpp"
 #include <string>
 #include <iostream>
-
+#include <vector>
 using namespace cv;
 using namespace std;
 
@@ -64,6 +64,7 @@ public:
     Point3f getCurrentLoc();
 
 	int frameCounter;
+	int frameCounterTarget;
 
 	bool isDetected;
 
@@ -76,6 +77,10 @@ public:
 	KalmanFilter KF;
 
 	cv::Mat rectified;
+
+	int lastArea;
+
+	vector<int> mapping;
 private:
     Point3f currentLoc;
     Mat currentImg, previousImg;
@@ -88,9 +93,12 @@ private:
     void adjustImg(Mat & img);
 	void adjustImg_gpu(gpu::GpuMat& img);
     void binarizeTarget(const Mat & img, Mat & bi);
+	void binarizeTarget_HSV(const Mat& img, Mat & bi);
+	void binarizeTarget_LAB(const Mat& img, Mat & bi);
 	void binarizeTarget_gpu(const gpu::GpuMat img, gpu::GpuMat & bi);
     void imadjust(const Mat1b& src, Mat1b& dst, int tol = 1, Vec2i in = Vec2i(0, 255), Vec2i out = Vec2i(0, 255));
 	//void imadjust_gpu(const gpu::GpuMat& src, gpu::GpuMat& des, int tol = 1, Vec2i in = Vec2i(0, 255), Vec2i out = Vec2i(0, 255));
+	void imadjust_mapping(const Mat& src, Mat& dst, vector<int> mapping);
 	void locating(vector<Point> & tarContour);
 	bool contourDetect(Mat& bi, vector<Point> & tarContour);
 	void runOneFrame();

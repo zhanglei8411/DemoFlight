@@ -10,23 +10,38 @@
 #include <stdio.h>
 #include "getTargetLoc.hpp"
 #include "inifile.h"
-#include "time.h"
-
+#include <time.h>
+#include <math.h>
 using namespace cv;
 using namespace std;
 
-#define  BUF_SIZE 256 
+#define  BUF_SIZE 256
+static double max(double a, double b)
+{
+	if (a > b)
+		return a;
+	else
+		return b;
+}
+static double min(double a, double b)
+{
+	if(a < b)
+		return a;
+	else
+		return b;
+}
 
 xyVision::GetTarget::GetTarget(string configName)
 {
 	this->setCameraParams(configName);
 	frameCounter = 0;
+	frameCounterTarget = 0;
 	isDetected = true;
 	this->useGPU = false;
 	time1 = 0;
 	time2 = 0;
 	time3 = 0;
-	
+
 
 	if (this->cameraInfo.cameraType == 1)
 	{
@@ -38,7 +53,7 @@ xyVision::GetTarget::GetTarget(string configName)
 	{
 		cv::fisheye::estimateNewCameraMatrixForUndistortRectify(cameraInfo.cameraMatrix, cameraInfo.distortCoeff,
 			cameraInfo.imageSize, cv::Matx33d::eye(), cameraInfo.newCameraMatrix, 0.8, cameraInfo.newSize, 1);
-		cv::fisheye::initUndistortRectifyMap(cameraInfo.cameraMatrix, cameraInfo.distortCoeff, 
+		cv::fisheye::initUndistortRectifyMap(cameraInfo.cameraMatrix, cameraInfo.distortCoeff,
 			cv::Matx33d::eye(), cameraInfo.newCameraMatrix, cameraInfo.newSize, CV_16SC2, cameraInfo.map1, cameraInfo.map2);
 	}
 
@@ -47,9 +62,24 @@ xyVision::GetTarget::GetTarget(string configName)
 	KF.transitionMatrix = *(Mat_<float>(6,6) << 1,0,0,1,0,0,   0,1,0,0,1,0,  0,0,1,0,0,1,  0,0,0,1,0,0,  0,0,0,0,1,0,  0,0,0,0,0,1);
 	setIdentity(KF.measurementMatrix);
 	setIdentity(KF.processNoiseCov, Scalar::all(1e-4));
-	setIdentity(KF.measurementNoiseCov, Scalar::all(3));
+	setIdentity(KF.measurementNoiseCov, Scalar::all(1));
 	setIdentity(KF.errorCovPost, Scalar::all(.1));
 
+	// compute mapping
+	this->mapping.resize(256);
+	double p[5] = {-3.283780259159030e-07, 1.182791454914262e-04, -0.006030084747775, 0.254476804888576, 2.376613986565857};
+	for (int i = 0; i < 256; ++i)
+	{
+		double r = 0;
+		for (int o = 4; o >=0; o--)
+		{
+			r = r + p[4-o]*pow((double)i, (double)o);
+		}
+		r = max(r, 0);
+		r = min(255, r);
+		r = int(floor(r));
+		mapping[i] = r;
+	}
 }
 
 void xyVision::GetTarget::setCameraParams(string configFileName)
@@ -85,7 +115,7 @@ void xyVision::GetTarget::setCameraParams(string configFileName)
 	this->cameraInfo.cameraMatrix = _cameraMat;
 	this->cameraInfo.distortCoeff = _dis;
 	this->cameraInfo.imageSize = Size(imageWidth, imageHeight);
-	
+
 	// read target information
 	section = "targetConfig";
 	key = "width";
@@ -99,6 +129,14 @@ void xyVision::GetTarget::setCameraParams(string configFileName)
 	this->proInfo.scale = scale;
 
 	this->cameraInfo.newSize = Size(int(imageWidth*scale), int(imageHeight*scale));
+/*
+	cout << "camera matrix " << endl;
+	cout << this->cameraInfo.cameraMatrix << endl;
+	cout << "image size" << endl;
+	cout << this->cameraInfo.imageSize.width << " " << this->cameraInfo.imageSize.height << endl;
+	cout << "new image size" << endl;
+	cout << this->cameraInfo.newSize.width << " " << this->cameraInfo.newSize.height << endl;
+*/
 }
 
 xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
@@ -117,25 +155,26 @@ xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
 	{
 		this->runOneFrame();
 	}
-	
+
 	if (isDetected)
 	{
 		// run kalman filter here
 		// first frame, initialize kalman filter
 		Point3f _point = this->getCurrentLoc();
-		if (this->frameCounter == 0)
+		if (this->frameCounterTarget == 0)
 		{
-			
+
 			KF.statePre = Mat(Matx16f(_point.x, _point.y, _point.z, 0.f, 0.f, 0.f));
 		}
-		else if (this->frameCounter > 0)
+		else if (this->frameCounterTarget > 0)
 		{
 			KF.predict();
 			Mat estimate = KF.correct(Mat(_point));
 			this->currentLoc = Point3f(estimate.at<float>(0), estimate.at<float>(1), estimate.at<float>(2));
 		}
-		this->frameCounter ++;
+		this->frameCounterTarget ++;
 	}
+	this->frameCounter ++;
 	return *this;
 }
 
@@ -185,13 +224,13 @@ void xyVision::GetTarget::imadjust(const Mat1b& src, Mat1b& dst, int tol, Vec2i 
 
 void xyVision::GetTarget::adjustImg(Mat & img)
 {
-	//CV_Assert(img.channels() == 3);
-	if (img.channels() != 3)
-	{	
-		printf("img channel is not 3 \n");
-		return ;
-	}
-	
+	CV_Assert(img.channels() == 3);
+	// if (img.channels() != 3)
+	// {
+	// 	printf("img channel is not 3 \n");
+	// 	return ;
+	// }
+
 	Size sz = img.size();
 	float scaleFactor = this->proInfo.scale;
 	if (cameraInfo.cameraType == 1)
@@ -204,14 +243,24 @@ void xyVision::GetTarget::adjustImg(Mat & img)
 		this->rectified = img.clone();
 	}
 
-	vector<Mat> chs;
-	split(img, chs);
-	Mat1b out;
+	//vector<Mat> chs;
+	//split(img, chs);
+	//Mat1b out;
 	// b g r
-	imadjust(chs[2], out);
+	//imadjust(chs[2], out);
+	//imadjust_mapping(chs[2], out, this->mapping);
 	//cv::equalizeHist(chs[2], out);
-	chs[2] = out;
-	merge(chs, img);
+	//chs[2] = out.clone();
+
+	//imadjust(chs[1], out);
+	//imadjust_mapping(chs[1], out, this->mapping);
+	//chs[1] = out.clone();
+	//imadjust(chs[0], out);
+	//imadjust_mapping(chs[0], out, this->mapping);
+	//chs[0] = out.clone();
+
+	//merge(chs, img);
+	//cv::imwrite("adj.bmp", img);
 }
 
 void xyVision::GetTarget::adjustImg_gpu(gpu::GpuMat& img)
@@ -236,19 +285,32 @@ void xyVision::GetTarget::adjustImg_gpu(gpu::GpuMat& img)
 	gpu::merge(chs, img);
 }
 
+void xyVision::GetTarget::imadjust_mapping(const Mat& src, Mat& dst, vector<int> mapping)
+{
+	CV_Assert(src.type() == CV_8UC1);
+	dst = src.clone();
+	const unsigned char* pt_src = src.ptr<unsigned char>(0);
+	unsigned char* pt_dst = dst.ptr<unsigned char>(0);
+	int n = (int)src.total();
+	for (int i = 0; i < n; ++i)
+	{
+		pt_dst[i] = this->mapping[(int)pt_src[i]];
+	}
+}
+
 void xyVision::GetTarget::binarizeTarget(const Mat & img, Mat & bi)
 {
 	CV_Assert(img.channels() == 3);
-	
+
 	std::vector<Mat> chs;
-	
+
 	Mat img2 = img.clone();
 	//img2.convertTo(img2, CV_32FC3);
 	split(img2, chs);
 	Mat img_t = chs[2] - chs[0] - chs[1];
-	cv::threshold(img_t, bi, 10, 255, THRESH_BINARY);
+	cv::threshold(img_t, bi, 30, 255, THRESH_BINARY);
 	bi.convertTo(bi, CV_8UC1);
-	
+	cv::imwrite("bi.bmp", bi);
 	// resize binary image
 	//Size sz = img2.size();
 	//float scaleFactor = this->proInfo.scale;
@@ -258,7 +320,7 @@ void xyVision::GetTarget::binarizeTarget(const Mat & img, Mat & bi)
 	//Mat kernel = cv::Mat::ones(3, 3, CV_8UC1);
 	//dilate(bi, bi, kernel);
 	//erode(bi, bi, kernel);
-	
+
 }
 
 void xyVision::GetTarget::binarizeTarget_gpu(const gpu::GpuMat img, gpu::GpuMat & bi)
@@ -275,21 +337,75 @@ void xyVision::GetTarget::binarizeTarget_gpu(const gpu::GpuMat img, gpu::GpuMat 
 	gpu::subtract(chs[2], chs[0], img_tmp);
 	gpu::subtract(img_tmp, chs[1], img_t);
 
-	gpu::threshold(img_t, bi, 10, 255, THRESH_BINARY);
+	gpu::threshold(img_t, bi, 40, 255, THRESH_BINARY);
 
 	bi.convertTo(bi, CV_8UC1);
+}
+void xyVision::GetTarget::binarizeTarget_HSV(const Mat& img, Mat & bi)
+{
+	Mat img_hsv;
+	cvtColor(img, img_hsv, CV_BGR2HSV);
+	std::vector<Mat> chs;
+	Mat img2 = img.clone();
+	img2.convertTo(img2, CV_32F);
+	split(img2, chs);
 
-	// resize binary image
-	//Size sz = img2.size();
-	//float scaleFactor = this->proInfo.scale;
-	//gpu::GpuMat bi2, bi3, bi4;
-	//gpu::resize(bi, bi2, Size(int(sz.width*scaleFactor), int(sz.height*scaleFactor)), scaleFactor, scaleFactor, cv::INTER_NEAREST);
-	//bi = bi2.clone();
-	// improve binary image
-	//Mat kernel = cv::Mat::ones(3, 3, CV_8UC1);
-	//gpu::dilate(bi2, bi3, kernel);
-	//gpu::erode(bi3, bi4, kernel);
-	//bi = bi4.clone();
+	Mat img_t = chs[2] - chs[0] - chs[1];
+	split(img2, chs);
+	
+	// H is 0-180, 221-255 is red
+	Mat bi_hsv1, bi_hsv2,bi_rgb;
+
+	inRange(img_hsv, Scalar(160, 40, 40), Scalar(180, 255, 255), bi_hsv1);
+	//inRange(img_hsv, Scalar(0, 40, 40), Scalar(20, 255, 255), bi_hsv2);
+	cv::threshold(chs[2], bi_rgb, 100, 255, THRESH_BINARY);
+	//inRange(img, Scalar(0, 0, 100), Scalar(200, 200, 255), bi_rgb);
+	//inRange(img, Scalar(0, 0, 0), Scalar(255, 255, 255), bi_rgb);
+	//cv::imwrite("bi_hsv1.bmp", bi_hsv1);
+	//cv::imwrite("bi_hsv2.bmp", bi_hsv2);
+	//cv::imwrite("bi_rgb.bmp", bi_rgb);
+	bi_hsv1.convertTo(bi_hsv1, CV_32F);
+	//bi_hsv2.convertTo(bi_hsv2, CV_32F);
+	bi_rgb.convertTo(bi_rgb, CV_32F);
+	bi_hsv1 = bi_hsv1 / 255;
+	//bi_hsv2 = bi_hsv2 / 255;
+	bi_rgb = bi_rgb / 255;
+
+	//bi = bi_hsv1.mul(bi_rgb).mul(bi_hsv2) * 255;
+	cv::threshold((bi_hsv1).mul(bi_rgb), bi, 0, 255, THRESH_BINARY);
+	bi.convertTo(bi, CV_8U);
+
+
+	Mat kernel = cv::Mat::ones(5, 5, CV_8UC1);
+	dilate(bi, bi, kernel);
+	erode(bi, bi, kernel);
+	//cv::imwrite("bi.bmp", bi);
+}
+
+void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
+{
+
+	Mat img_lab;
+	cvtColor(img, img_lab, CV_BGR2Lab);
+	std::vector<Mat> chs;
+	Mat img2 = img.clone();
+	img2.convertTo(img2, CV_32F);
+	split(img2, chs);
+
+	Mat bi_lab, bi_rgb;
+	inRange(img_lab, Scalar(0, 170, 0), Scalar(255, 255, 255), bi_lab);
+	cv::threshold(chs[2], bi_rgb, 100, 255, THRESH_BINARY);
+
+	bi_lab.convertTo(bi_lab, CV_32F);
+	bi_rgb.convertTo(bi_rgb, CV_32F);
+
+	cv::threshold(bi_lab.mul(bi_rgb), bi, 0, 255, THRESH_BINARY);
+	bi.convertTo(bi, CV_8U);
+
+	Mat kernel = cv::Mat::ones(5, 5, CV_8UC1);
+	dilate(bi, bi, kernel);
+	erode(bi, bi, kernel);
+	//cv::imwrite("bi.bmp", bi);
 }
 
 bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
@@ -309,22 +425,22 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 		return false;
 
 	// filter areas that are not square
-	//vector<vector<Point> > contours_filter;
-	//for (int i = 0; i < (int)contours.size(); ++i)
-	//{
-	//	//if (i == (int)contours.size() - 1)
-	//	//{
-	//	//	cout << " " << endl;
-	//	//}
-	//	RotatedRect box = minAreaRect(Mat(contours[i]));
-	//	float height = float(box.size.height);
-	//	float width = float(box.size.width);
-	//	if (height / width < 3 && width / height < 3)
-	//	{
-	//		contours_filter.push_back(contours[i]);
-	//	}
-	//}
-	//contours = contours_filter;
+	vector<vector<Point> > contours_filter;
+	for (int i = 0; i < (int)contours.size(); ++i)
+	{
+		//if (i == (int)contours.size() - 1)
+		//{
+		//	cout << " " << endl;
+		//}
+		RotatedRect box = minAreaRect(Mat(contours[i]));
+		float height = float(box.size.height);
+		float width = float(box.size.width);
+		if (height / width < 2 && width / height < 2)
+		{
+			contours_filter.push_back(contours[i]);
+		}
+	}
+	contours = contours_filter;
 
 	if ((int)contours.size() == 0)
 	{
@@ -342,8 +458,13 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 			maxIdx = i;
 		}
 	}
-	if (maxAera < (sz.width/50.0f*sz.height/50.0f))
+	if (maxAera < (sz.width/80.0f*sz.height/80.0f))
 		return false;
+	if (this->frameCounterTarget > 0 &&
+		((double)maxAera / (double)this->lastArea < 3.0/10 ))
+	{
+		return false;
+	}
 	// set zeros for other contours
 	for (int i = 0; i < (int)contours.size(); ++i)
 	{
@@ -354,6 +475,7 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 		}
 	}
 	tarContour = contours[maxIdx];
+	this->lastArea = maxAera;
 	return true;
 }
 void xyVision::GetTarget::locating(vector<Point> & tarContour)
@@ -401,7 +523,9 @@ void xyVision::GetTarget::runOneFrame()
 
 	//start = clock();
 
-	this->binarizeTarget(_img, bi);
+	//this->binarizeTarget(_img, bi);
+	//this->binarizeTarget_HSV(_img, bi);
+	this->binarizeTarget_LAB(_img, bi);
 
 	//finish = clock();
 	//totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
@@ -429,12 +553,12 @@ void xyVision::GetTarget::runOneFrame()
 
 void xyVision::GetTarget::runOneFrame_gpu()
 {
-	
+
 	//clock_t start,finish;
 	//double totaltime;
 
 	//start = clock();
-	
+
 	Mat _img = currentImg.clone();
 	gpu::GpuMat _img_gpu;
 	_img_gpu.upload(_img);
@@ -446,7 +570,7 @@ void xyVision::GetTarget::runOneFrame_gpu()
 
 	vector<Point> tarContour;
 	bool detected;
-	
+
 	//start = clock();
 
 	gpu::GpuMat bi_gpu;
@@ -496,6 +620,7 @@ void xyVision::GetTarget::runOneFrame_gpu()
 //		Size sz = img.size();
 //		_K = _K * scaleFactor;
 //		_K(2, 2) = 1.0f;
+//
 //		
 //		//_imgGpu.upload(_img);
 //		//gpu::resize(_imgGpu, _imgGpu, Size(int(sz.width*scaleFactor), int(sz.height*scaleFactor)));

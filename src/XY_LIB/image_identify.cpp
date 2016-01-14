@@ -5,7 +5,7 @@
 using namespace cv;
 using namespace std;
 
-Offset offset_data;
+Offset_Data offset_data;
 
 pthread_mutex_t capture_on_off_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t offset_msg_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -21,46 +21,68 @@ int tell_external_offset_is_available(void)
 	return sem_post(&offset_get_sem);		//if error return -1
 }
 
-int check_offset_data_if_available(void)
+int check_offset_data_if_available(int _get_id)
 {
-	int i = 0;
-	while(sem_trywait(&offset_get_sem) == 0)
+
+	int mask = 0;
+	pthread_mutex_lock(&offset_msg_lock);
+	mask = offset_data.gotten;
+	pthread_mutex_unlock(&offset_msg_lock);
+	
+	// no update
+	if( mask == 0 )
 	{
-		i++;
-	}
-	if(i != 0)
-		return 0;							//available
-	else
 		return -1;
+	}
+	// offset was update
+	if( mask & 0x01 )
+	{
+		// offset hasn't been gotten
+		if( (mask & _get_id)  == 0)
+		{
+			return 0;
+		}
+		else	// offset has been gotten
+		{
+			return -1;
+		}
+			
+	}
 }
 
 void set_offset_data(Point3f _point)
 {
 	pthread_mutex_lock(&offset_msg_lock);
-	offset_data.x = _point.x;
-	offset_data.y = _point.y;
-	offset_data.z = _point.z;
+	offset_data._offset.x = _point.x;
+	offset_data._offset.y = _point.y;
+	offset_data._offset.z = _point.z;
+	offset_data.gotten = 0x01;
 	pthread_mutex_unlock(&offset_msg_lock);
 }
 
-Offset get_offset_data(void)
+Offset get_offset_data(int _get_id)
 {
 	Offset ret;
 	pthread_mutex_lock(&offset_msg_lock);
-	ret = offset_data;
+	ret = offset_data._offset;
+	offset_data.gotten |= _get_id;
 	pthread_mutex_unlock(&offset_msg_lock);
 
 	return ret;
 }
 
-int XY_Get_Offset_Data(Offset *_data)
+/* Instructions : 
+ * Offset offset;
+ * XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A);
+ */
+int XY_Get_Offset_Data(Offset *_data, int _get_id)
 {
-	if(check_offset_data_if_available() == -1)
+	if(check_offset_data_if_available(_get_id) == -1)
 	{
 		return -1;
 	}
 
-	*_data = get_offset_data();
+	*_data = get_offset_data(_get_id);
 	return 0;
 }
 
@@ -110,8 +132,9 @@ int XY_Start_Capture(void)
 
 int XY_Stop_Capture(void)
 {
+	Offset _offset;
 	set_capture_on_flag(0);
-
+	XY_Get_Offset_Data(&_offset, OFFSET_GET_ID_A);
 	return 0;
 }
 
@@ -119,49 +142,73 @@ stringstream stream;
 string dirname = "/mnt/sdcard/image/";
 string total_filename;
 float cur_height;
-int save_image_into_sdcard(IplImage *_image)
+int save_image_into_sdcard(Mat _image)
 {
+	struct timeval	  tv;  
+	struct tm		  *tmlocal; 
+	char name_head[50] = {0};
+
 	XY_Pro_Get_Pos_Height(&cur_height);
-	//printf("%f\n", cur_height);
+	
+	if( gettimeofday(&tv, NULL) != 0)
+	{
+		printf("ERROR get timestamp for image name.\n");
+		
+	}
+	tmlocal = localtime(&tv.tv_sec); 
+	sprintf(name_head, "%d_%d_%ld", tmlocal->tm_min,
+									tmlocal->tm_sec,
+									tv.tv_usec); 
 	
 	stream.str("");
 	stream << cur_height;
-	total_filename = dirname + "H" + stream.str() + ".jpg";
+	total_filename = dirname + name_head + "H" + stream.str() + ".jpg";
+	cout << total_filename << endl;
 	const char *p = total_filename.c_str();
-	cvSaveImage(p, _image);
+	imwrite(p, _image);
 	
 }
 
-IplImage *image;
-//Mat img;
+
+Mat img;
 static void *capture_thread_func(void * arg)
 {	
 	//thread_binding_cpu(NULL, CAPTURE_JOB_CPU);
 
-	CvCapture* capture = NULL;
-	capture = cvCreateCameraCapture(0);
-	
 	int time_ = 0;
-	char *p = NULL;
+	//xyVision::GetTarget sample("config.ini");
+	cv::VideoCapture cap(0);
+	if(!cap.isOpened())
+	{
+		printf("Cap not open\n");
+		pthread_exit(NULL);
+	}
+
+	cap.set(CV_CAP_PROP_FRAME_WIDTH, (double)1280);
+	cap.set(CV_CAP_PROP_FRAME_HEIGHT, (double)720);
+	cap.set(CV_CAP_PROP_SATURATION, (double)0.5);
+	
+	cout << "CV_CAP_PROP_FRAME_WIDTH " << cap.get(CV_CAP_PROP_FRAME_WIDTH) << endl;
+	cout << "CV_CAP_PROP_FRAME_HEIGHT " << cap.get(CV_CAP_PROP_FRAME_HEIGHT) << endl;
+	cout << "CV_CAP_PROP_SATURATION " << cap.get(CV_CAP_PROP_SATURATION) << endl;
 	
 	while(1)
 	{	
 		if(if_capture_on())
 		{
 			sem_wait(&image_handle_sem);	//除第一次外，等待image_identify_thread_func处理完图像
-			image = cvQueryFrame( capture );
-			if( !image )
-			{ 
+			cap >> img;
+			if(!img.data)
+			{
 				printf("No image!\n");
 				sleep(2);
 				sem_post(&image_handle_sem);
-				
 				continue;
-			}
+			} 
 			time_++;
-			if(time_ == 5)
+			if(time_ == 1)
 			{
-				save_image_into_sdcard(image);
+				save_image_into_sdcard(img);
 				time_ = 0;
 			}
 			sem_post(&image_get_sem);		
@@ -184,17 +231,15 @@ static void *image_identify_thread_func(void * arg)
 	while(1)
 	{	
 		sem_wait(&image_get_sem);		//等待capture获取到图像
-#if 0
-		Mat mat_frame = image;			//IplImage --> Mat
-
-		sample << mat_frame;			//identify
+#if 1
+		sample << img;			//identify
 		if(!sample.isDetected )
 			goto pre_restart;
 
 		cout << sample.getCurrentLoc() << endl;
 
 		set_offset_data(sample.getCurrentLoc());
-		tell_external_offset_is_available();
+		//tell_external_offset_is_available();
 #endif
 pre_restart:
 		sem_post(&image_handle_sem);
@@ -209,7 +254,7 @@ int setup_sem(void)
 	ret = sem_init(&capture_start_sem, 0, 0);
 	ret += sem_init(&image_get_sem, 0, 0);
 	ret += sem_init(&image_handle_sem, 0, 1);
-	ret += sem_init(&offset_get_sem, 0, 0);
+	//ret += sem_init(&offset_get_sem, 0, 0);
 	return ret;
 }
 

@@ -8,7 +8,180 @@ struct ks103_adapter adapter;
 
 pthread_mutex_t ultra_msg_lock = PTHREAD_MUTEX_INITIALIZER;
 sem_t ultra_get_sem;
-UltraData ultra_data = 0;
+
+Ultra_Data ultra_data;
+
+
+
+int ultra_index = 0;
+float ultra_buf[ULTRA_ANALYSIS_NUM]={};
+
+//计算标准差
+static int STD_calc(float avg)
+{
+         float variance=0;
+         float stdev;
+         variance=(pow((avg-ultra_buf[0]),2)+ pow((avg-ultra_buf[1]),2)+pow((avg-ultra_buf[2]),2)+pow((avg-ultra_buf[3]),2) )/4;
+         stdev=sqrt(variance);
+         if(stdev>0.3)
+            return -1;
+         else return 0;
+}
+static void filter_hop(int ultra_index,int *stat)
+{
+      if(ultra_index==0)
+      {
+             if( ultra_buf[ultra_index]<=ultra_buf[ultra_index+1]&&ultra_buf[ultra_index+1]<=ultra_buf[ultra_index+2]||
+                  ultra_buf[ultra_index]>=ultra_buf[ultra_index+1]&&ultra_buf[ultra_index+1]>=ultra_buf[ultra_index+2])
+              {
+                     //什么也不做
+              }
+              else
+              {
+                  *stat|=0x01<<ultra_index;
+              }
+      }
+      else if(ultra_index>0&&ultra_index<3)
+      { 
+              if( ultra_buf[ultra_index-1]<=ultra_buf[ultra_index]&&ultra_buf[ultra_index]<=ultra_buf[ultra_index+1]||
+                  ultra_buf[ultra_index-1]>=ultra_buf[ultra_index]&&ultra_buf[ultra_index]>=ultra_buf[ultra_index+1])
+              {
+                     //什么也不做
+              }
+              else
+              {
+                  *stat|=0x01<<ultra_index;
+              }
+      }
+      else if(ultra_index==3)
+      {  
+              if( ultra_buf[ultra_index-2]<=ultra_buf[ultra_index-1]&&ultra_buf[ultra_index-1]<=ultra_buf[ultra_index]||
+                  ultra_buf[ultra_index-2]>=ultra_buf[ultra_index-1]&&ultra_buf[ultra_index-1]>=ultra_buf[ultra_index])
+              {
+                     //什么也不做
+              }
+              else
+              {
+                  *stat|=0x01<<ultra_index;
+              }
+      }
+}
+
+static void clear_ErrData(int stat)
+{
+		if(stat)
+		{
+            switch(stat)
+			{
+				case 1:
+					  ultra_buf[0]=0;
+					  break;
+				case 2:
+					  ultra_buf[1]=0;
+					  break;
+				case 3:
+					  ultra_buf[0]=0;
+					  ultra_buf[1]=0;
+					  break;
+				case 4:
+					  ultra_buf[2]=0;
+					  break;
+				case 5:
+					  ultra_buf[0]=0;
+					  ultra_buf[2]=0;
+					  break;
+				case 6:
+					  ultra_buf[1]=0;
+					  ultra_buf[2]=0;
+					  break;
+				case 7:
+					  ultra_buf[0]=0;
+					  ultra_buf[1]=0;
+					  ultra_buf[2]=0;
+					  break;      
+				case 8:
+					  ultra_buf[3]=0;
+					  break;
+				case 9:
+					  ultra_buf[0]=0;
+					  ultra_buf[3]=0;
+					  break;
+				case 10:
+					  ultra_buf[1]=0;
+					  ultra_buf[3]=0;
+					  break;
+				case 11:
+					  ultra_buf[0]=0;
+					  ultra_buf[1]=0;
+					  ultra_buf[3]=0;
+					  break;
+				case 12: 
+					  ultra_buf[2]=0;
+					  ultra_buf[3]=0;
+					  break;
+				case 13: 
+					  ultra_buf[0]=0;
+					  ultra_buf[2]=0;
+					  ultra_buf[3]=0;
+					  break;  
+				case 14: 
+					  ultra_buf[1]=0;
+					  ultra_buf[2]=0;
+					  ultra_buf[3]=0;
+					  break;
+				case 15:
+					  ultra_buf[0]=0;
+					  ultra_buf[1]=0;
+					  ultra_buf[2]=0;
+					  ultra_buf[3]=0;
+					  break; 
+				default:
+					  break;
+			}
+      }
+}
+
+int ultra_calc(float _log_ultra_data)
+{  
+	ultra_buf[ultra_index] = _log_ultra_data;    
+	ultra_index++;
+	int stat=0;  
+
+	if(ultra_index == ULTRA_ANALYSIS_NUM)
+	{
+		float avg = (ultra_buf[0] + ultra_buf[1] + ultra_buf[2] + ultra_buf[3]) / 4;
+		ultra_index = 0;
+		if(STD_calc(avg)==0)
+        {
+			while(ultra_index < ULTRA_ANALYSIS_NUM)
+			{
+				float tmp = 0;
+				tmp = abs(ultra_buf[ultra_index] - avg);
+			
+				if(tmp <= 0.2 && tmp >= 0)
+				{
+					//第三层过滤   
+	            	filter_hop(ultra_index,&stat);
+					ultra_index++;
+				}
+				else
+				{               
+					stat |= 0x01 << ultra_index;
+					ultra_index++;
+				}
+			}
+			clear_ErrData(stat);
+        }
+        else
+		{
+            return 1;
+		}
+		
+		ultra_index = 0;
+		return 0;
+	}
+	return 1;
+}
 
 
 int tell_external_ultra_is_available(void)
@@ -16,44 +189,61 @@ int tell_external_ultra_is_available(void)
 	return sem_post(&ultra_get_sem);		//if error return -1
 }
 
-int check_ultra_data_if_available(void)
+int check_ultra_data_if_available(int _get_id)
 {
-	int i = 0;
-	while(sem_trywait(&ultra_get_sem) == 0)
+	int mask = 0;
+	pthread_mutex_lock(&ultra_msg_lock);
+	mask = ultra_data.gotten;
+	pthread_mutex_unlock(&ultra_msg_lock);
+	
+	// no update
+	if( mask == 0 )
 	{
-		i++;
-	}
-	if(i != 0)
-		return 0;							//available
-	else
 		return -1;
+	}
+	// ultra was update
+	if( mask & 0x01 )
+	{
+		// ultra hasn't been gotten
+		if( (mask & _get_id)  == 0)
+		{
+			return 0;
+		}
+		else	// ultra has been gotten
+		{
+			return -1;
+		}
+			
+	}
 }
 
 void set_ultra_data(float _data)
 {
 	pthread_mutex_lock(&ultra_msg_lock);
-	ultra_data = _data;
+	ultra_data._ultra = _data;
+	ultra_data.gotten = 0x01;
 	pthread_mutex_unlock(&ultra_msg_lock);
 }
 
-float get_ultra_data(void)
+float get_ultra_data(int _get_id)
 {
 	float ret;
 	pthread_mutex_lock(&ultra_msg_lock);
-	ret = ultra_data;
+	ret = ultra_data._ultra;
+	ultra_data.gotten |= _get_id;
 	pthread_mutex_unlock(&ultra_msg_lock);
 
 	return ret;
 }
 
-int XY_Get_Ultra_Data(float *_data)
+int XY_Get_Ultra_Data(float *_data, int _get_id)
 {
-	if(check_ultra_data_if_available() == -1)
+	if(check_ultra_data_if_available(_get_id) == -1)
 	{
 		return -1;
 	}
 
-	*_data = get_ultra_data();
+	*_data = get_ultra_data(_get_id);
 	return 0;
 }
 
@@ -309,6 +499,9 @@ static void *KS103_Thread_Func(void * arg)
 	int i = 0;
 	char _msg[50];
 
+	struct timeval tpstart,tpend; 
+	float timeuse; 
+	
 	adapter_setup();
 	
 	wbuf[0] = KS103_SLAVE_ADDRESS;
@@ -318,6 +511,9 @@ static void *KS103_Thread_Func(void * arg)
 	
 	while(1)
 	{
+#if 0
+		gettimeofday(&tpstart,NULL); 
+#endif
 		update_ks103_cmd(&wbuf[2]);
 		if(!wbuf[2] || wbuf[2] > 0xCC)
 		{
@@ -352,9 +548,15 @@ static void *KS103_Thread_Func(void * arg)
 	
 		set_ultra_data( KS103_Cal_Detect_Result(rbuf, wbuf[2]) );
 		//printf("ultra is: %f.\n", get_ultra_data());
-		tell_external_ultra_is_available();
+		//tell_external_ultra_is_available();
 		
-		usleep(100000);
+		//usleep(100000);
+#if 0
+		gettimeofday(&tpend,NULL); 
+		timeuse = 1000000 * (tpend.tv_sec - tpstart.tv_sec) + tpend.tv_usec - tpstartcd.tv_usec; 
+		timeuse /= 1000000; 
+		cout << "Each range cost " << timeuse << endl;
+#endif
 	}
 	pthread_exit(NULL);
 }

@@ -2,6 +2,8 @@
 #include "thread_common_op.h"
 #include "image_identify.h"
 #include "sd_store_log.h"
+#include "wireless_debug.h"
+#include "control_law.h"
 
 Leg_Node *route_head = NULL;
 Leg_Node *cur_legn = NULL;
@@ -11,12 +13,14 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 extern struct debug_info debug_package;
 
+int drone_goback = 0;
 
-
+api_pos_data_t focus_point;
 static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 {
 	api_vel_data_t cur_vel;
 	api_pos_data_t cur_pos;
+	
 	attitude_data_t user_ctrl_data;
 	int flag = 0;
 
@@ -24,7 +28,39 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 	user_ctrl_data.ctrl_flag = 0x40;//modified from 00 to 40 by zhanglei 1225
 	
 	user_ctrl_data.roll_or_x = 0;//控制水平速度为0, add by zhanglei 1225
-	user_ctrl_data.pitch_or_y = 0;	 
+	user_ctrl_data.pitch_or_y = 0;	
+
+	// add by zhouzibo in 16/1/11
+	switch((int)(*(int *)arg))
+	{
+		//Up
+		case MODE_1_UP_TO_U2_IMAGE_VEL_1:				
+			DJI_Pro_Get_Pos(&focus_point);
+			break;
+		case MODE_2_UP_TO_U3:
+			DJI_Pro_Get_Pos(&focus_point);
+			break;
+
+		//Down
+		case MODE_3_DOWN_TO_D3:
+			DJI_Pro_Get_Pos(&focus_point);
+			break;
+
+			case MODE_T1_TEST_HOVER_WITH_IMAGE:
+			DJI_Pro_Get_Pos(&focus_point);
+			break;	
+
+			case MODE_4_DOWN_TO_D2_IMAGE_VEL_N05:
+			DJI_Pro_Get_Pos(&focus_point);
+			break;	
+
+		
+		case MODE_5_DOWN_TO_D1:
+			DJI_Pro_Get_Pos(&focus_point);
+			break;	
+		default:
+			break;
+	}
 	
 	while(1)
 	{
@@ -36,27 +72,51 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 		if( (int)(*(int *)arg) == MODE_1_UP_TO_U2_IMAGE_VEL_1 )
 		{
 			/* up with image vel=1 */
-			XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(cur_vel, cur_pos, 1, GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2, &user_ctrl_data, &flag);
+			XY_Cal_Attitude_Ctrl_Data_Up_To_Height_WithVel(	cur_vel,
+																cur_pos,
+																focus_point,
+																1, GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == MODE_2_UP_TO_U3)
 		{
 			/* up to U3  */
-			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_UP_TO_CRUICE_HEIGHT_H_U3, &user_ctrl_data, &flag);
+			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_Height(	cur_vel,
+														cur_pos,
+														focus_point,
+														GO_UP_TO_CRUICE_HEIGHT_H_U3, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == MODE_3_DOWN_TO_D3)
 		{
 			/* down to D3*/
-			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_H_D3, &user_ctrl_data, &flag);
+			XY_Cal_Attitude_Ctrl_Data_UpDown_TO_Height(	cur_vel,
+														cur_pos,
+														focus_point,
+														GO_DOWN_TO_HEIGHT_H_D3, &user_ctrl_data, &flag);
 		}
+
+		//temp test the image hover fun
+		else if( (int)(*(int *)arg) == MODE_T1_TEST_HOVER_WITH_IMAGE)
+		{
+			/* Hover to find mark */
+			XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(	cur_vel, cur_pos, focus_point.height, &user_ctrl_data, &flag);
+		}
+
+
 		else if( (int)(*(int *)arg) == MODE_4_DOWN_TO_D2_IMAGE_VEL_N05)
 		{
 			/* down with image vel=-0.5 */
-			XY_Cal_Attitude_Ctrl_Data_UpDown_To_H_WithVel(cur_vel, cur_pos,(-0.5), GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2, &user_ctrl_data, &flag);
+			XY_Cal_Attitude_Ctrl_Data_Down_To_Height_WithVel_IMAGE(	cur_vel,
+																cur_pos,
+																focus_point,
+																(-0.5), GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == MODE_5_DOWN_TO_D1 )
 		{
 			/* down to D1, ready to landing  */
-			 XY_Cal_Attitude_Ctrl_Data_UpDown_TO_H(cur_vel, cur_pos, GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1, &user_ctrl_data, &flag);
+			 XY_Cal_Attitude_Ctrl_Data_UpDown_TO_Height(cur_vel,
+			 											cur_pos,
+			 											focus_point, 
+			 											GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1, &user_ctrl_data, &flag);
 		}		
 
 
@@ -167,7 +227,7 @@ static void *Route_Task_Thread_Func(void * arg)
 
 
 //Need Add image data
-
+		XY_Start_Capture();
 		/* --------------------- START ------------------------- */
 		/* 2.1 aircraft up with image to U2*/
 		Updown_Mode = MODE_1_UP_TO_U2_IMAGE_VEL_1;
@@ -175,6 +235,7 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
+		//XY_Debug_Sprintf(1, "Up to 10 meters\n");
 		/* 2.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -182,33 +243,17 @@ static void *Route_Task_Thread_Func(void * arg)
 		/* 2.3 check action if success */
 		//NULL
 		/* ---------------------- END -------------------------- */
-
+		XY_Stop_Capture();
 
 		
 		/* --------------------- START ------------------------- */
-		/* 2.1 aircraft up to U3 ready to cruise*/
+		/* 3.1 aircraft up to U3 ready to cruise*/
 		Updown_Mode = MODE_2_UP_TO_U3;
 		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
 		{
 			goto error;
 		}
-		/* 2.2 wait */
-		pthread_mutex_lock(&mutex);
-		pthread_cond_wait(&cond , &mutex);
-		pthread_mutex_unlock(&mutex);
-		/* 2.3 check action if success */
-		//NULL
-		/* ---------------------- END -------------------------- */
-
-
-		
-		XY_Start_Capture();
-		/* --------------------- START ------------------------- */
-		/* 3.1 point to piont leg fly */				
-		if( pthread_create(&A_ARR, 0, XY_Aircraft_P2P_Thread_Func, NULL) != 0  )
-		{
-			goto error;
-		}
+		//XY_Debug_Sprintf(1, "Up to 40 meters\n");
 		/* 3.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -216,7 +261,25 @@ static void *Route_Task_Thread_Func(void * arg)
 		/* 3.3 check action if success */
 		//NULL
 		/* ---------------------- END -------------------------- */
-		XY_Stop_Capture();
+
+
+		
+		
+		/* --------------------- START ------------------------- */
+		/* 4.1 point to piont leg fly */				
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_P2P_Thread_Func, NULL) != 0  )
+		{
+			goto error;
+		}
+		//XY_Debug_Sprintf(1, "p2p start\n");
+		/* 4.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 4.3 check action if success */
+		//NULL
+		/* ---------------------- END -------------------------- */
+		
 
 
 
@@ -228,6 +291,7 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
+		//XY_Debug_Sprintf(1, "Down to 15 meters\n");
 		/* 5.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -240,22 +304,51 @@ static void *Route_Task_Thread_Func(void * arg)
 //Need Add image data
 
 		/* --------------------- START ------------------------- */
-		
-		/* 4. At D3 height to find mark */
-		//												//undefined this pthread
-
+		XY_Start_Capture();
+		/* 6. At D3 height to find mark */
+		Updown_Mode = MODE_T1_TEST_HOVER_WITH_IMAGE;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
+		{
+			goto error;
+		}
+		//XY_Debug_Sprintf(1, "Start to identifies image\n");
+		/* 6.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 6.3 check action if success */
+		//NULL
 		/* ---------------------- END -------------------------- */
 
 
 		
 		/* --------------------- START ------------------------- */
-		/* 5.1 aircraft down to GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2 with image */
+		/* 7.1 aircraft down to GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2 with image */
 		Updown_Mode = MODE_4_DOWN_TO_D2_IMAGE_VEL_N05;
 		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
 		{
 			goto error;
 		}
-		/* 5.2 wait */
+		//XY_Debug_Sprintf(1, "Down to 1 meters\n");
+		/* 7.2 wait */
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond , &mutex);
+		pthread_mutex_unlock(&mutex);
+		/* 7.3 check action if success */
+		//NULL
+		/* ---------------------- END -------------------------- */
+		XY_Stop_Capture();
+		
+
+		/* --------------------- START ------------------------- */
+		/* 8.1 aircraft down to D1 */
+		Updown_Mode = MODE_5_DOWN_TO_D1;
+		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
+		{
+			goto error;
+		}
+		//XY_Debug_Sprintf(1, "Down to 0.25 meters\n");
+		/* 8.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
 		pthread_mutex_unlock(&mutex);
@@ -263,28 +356,11 @@ static void *Route_Task_Thread_Func(void * arg)
 		//NULL
 		/* ---------------------- END -------------------------- */
 
-		
-
-		/* --------------------- START ------------------------- */
-		/* 5.1 aircraft down to D3 */
-		Updown_Mode = MODE_4_DOWN_TO_D2_IMAGE_VEL_N05;
-		if( pthread_create(&A_ARR, 0, XY_Aircraft_UpDown_Thread_Func, &Updown_Mode) != 0  )
-		{
-			goto error;
-		}
-		/* 5.2 wait */
-		pthread_mutex_lock(&mutex);
-		pthread_cond_wait(&cond , &mutex);
-		pthread_mutex_unlock(&mutex);
-		/* 5.3 check action if success */
-		//NULL
-		/* ---------------------- END -------------------------- */
-
 
 		
 		/* --------------------- START ------------------------- */
 		
-		/* 6. aircraft at D2 ready to landing*/
+		/* 9. aircraft at D2 ready to landing*/
 		ret = DJI_Pro_Status_Ctrl(6,0);
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -305,6 +381,8 @@ static void *Route_Task_Thread_Func(void * arg)
 			goto exit;
 		}
 	}
+
+	drone_goback = 1;
 
 error:
 	//回收资源
@@ -353,6 +431,9 @@ int temporary_init_route_list(void)
 	int ret = 0;
 	static api_pos_data_t start_pos;
 	static int go_back = 0;
+	api_pos_data_t g_origin_pos;
+	XYZ g_origin_XYZ, start_XYZ;
+	Center_xyz g_origin_xyz, start_xyz,g_origin_xyz_app;
 	
 	route_head = create_head_node(); 
 	if(route_head == NULL)
@@ -374,13 +455,38 @@ int temporary_init_route_list(void)
 		}while(start_pos.longti == 0);
 
 		set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
-		set_leg_end_pos(&task_info, start_pos.longti - 0.000002, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
-#if 0
-		set_leg_end_pos(&task_info,
-						(TARGET_LONTI_FROM_GOOGLE + GPS_DELTA_LONGTI),
-						(TARGET_LATI_FROM_GOOGLE + GPS_DELTA_LATI), 
-						(TARGET_ALTI_FROM_DJI_TEST) );	//01-10,羽毛球场起飞点
-#endif
+
+		//将终点坐标转为地面坐标系,zhanglei add 0111, not finish
+
+
+		//原点在羽毛球场起飞点
+		g_origin_pos.longti = ORIGIN_IN_HENGSHENG_LONGTI;
+		g_origin_pos.lati = ORIGIN_IN_HENGSHENG_LATI;
+		g_origin_pos.alti = ORIGIN_IN_HENGSHENG_ALTI;
+		
+		//从大地坐标系转换到球心坐标系
+		geo2XYZ(g_origin_pos, &g_origin_XYZ);
+		geo2XYZ(start_pos, &start_XYZ);
+
+		//从球心坐标系转到站心坐标系
+		XYZ2xyz(g_origin_pos, start_XYZ, &g_origin_xyz);
+		XYZ2xyz(g_origin_pos, start_XYZ, &start_xyz);
+	
+
+		/*地面坐标系x轴向北，y轴向东*/
+		g_origin_xyz_app.x=g_origin_xyz.x-DELTA_X_M_GOOGLEEARTH;  
+		g_origin_xyz_app.y=g_origin_xyz.y-DELTA_Y_M_GOOGLEEARTH;
+		g_origin_xyz_app.z=g_origin_xyz.z-DELTA_Z_M_GOOGLEEARTH;		
+		
+		XY_Debug_Send_At_Once("[g_origin_xyz.x %.3lf,g_origin_xyz.y %.3lf,g_origin_xyz.z %.3lf]\n", g_origin_xyz.x,g_origin_xyz.y,g_origin_xyz.z);
+		XY_Debug_Send_At_Once("[start_xyz.x %.3lf,start_xyz.y %.3lf,start_xyz.z %.3lf]\n", start_xyz.x,start_xyz.y,start_xyz.z);
+		XY_Debug_Send_At_Once("[g_origin_xyz_app.x %.3lf,g_origin_xyz_app.y %.3lf,g_origin_xyz_app.z %.3lf]\n", g_origin_xyz_app.x,g_origin_xyz_app.y,g_origin_xyz_app.z);
+		
+		//设置终点位置, not finish
+		
+		//set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
+		set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);
+
 
 		go_back = 1;
 	}
@@ -395,6 +501,9 @@ int temporary_init_route_list(void)
 		set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
 		go_back = -1;
 	}
+	
+	
+	
 	
 	printf("Initial information: (%.8lf, %.8lf) to (%.8lf, %.8lf)\n", 	task_info.start._longti, 
 																		task_info.start._lati,
@@ -488,5 +597,13 @@ void delete_leg_list(Leg_Node *_head)
 
 }
 
+int update_cur_legn_data(double _longti, double _lati)
+{
+	if(!cur_legn)
+		return -1;
 
+	cur_legn->leg.end._longti = _longti;
+	cur_legn->leg.end._alti = _lati;
+	return 0;
+}
 

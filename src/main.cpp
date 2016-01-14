@@ -24,7 +24,7 @@
 #include "XY_LIB/image_identify.h"
 #include "XY_LIB/thread_common_op.h"
 #include "XY_LIB/status_led.h"
-#include "XY_LIB/network_chat_3g.h"
+#include "XY_LIB/http_chat_3g.h"
 #include "XY_LIB/sd_store_log.h"
 
 
@@ -115,20 +115,43 @@ int main(int argc,char **argv)
 	
 	signal(SIGINT, handle_signal);
 
-	//XY_Chat_Setup();
 
+	
 	if(XY_Debug_Setup() < 0)
 	{
-		printf("Debug Function Open ERROR.\n");
+		printf("Debug Function Open ERROR...\n");
 	}
+	printf("Debug Function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Debug Function Open SUCCESS.\n");
+
+#if 1
+	if(XY_Http_Chat_Setup() < 0)
+	{
+		printf("Http Chat Function Open ERROR...\n");
+		XY_Debug_Send_At_Once("Http Chat Function Open ERROR.\n");
+	}
+	printf("Http Chat Function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Http Chat Function Open SUCCESS.\n");
+	
+	pthread_join(get_tid(THREADS_WAIT_ORDER), NULL );
+
+#if 0
+	/* just to test */
+	XY_Send_Http_Post_Request_Data(0, "id=%d&msg_id=%d&lng=%.10lf&lati=%.10lf\r\n", 11111, 1, 2.094421665, 0.528485654);
+#endif
+
+#endif
 
 	if(XY_Status_Led_Setup() < 0)
 	{
-		printf("Led Function Open ERROR.\n");
+		printf("Led Function Open ERROR...\n");
 		XY_Debug_Send_At_Once("Led Function Open ERROR.\n");
 	}
+	printf("Led Function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Led Function Open SUCCESS.\n");
+	
 	ioctl_led(2);
-	ioctl_led(3);
+	//ioctl_led(3);
 	if(argc == 2)
 	{
 		wait_time = atoi(argv[1]);
@@ -152,27 +175,28 @@ int main(int argc,char **argv)
 	}
 	
 	//ioctl_led(3);
-	
-	
-#if 0
-	ioctl_led(3);
-	ioctl_led(2);
-	ioctl_led(3);
-	ioctl_led(1);
-#endif
-	
+
 	if(XY_Capture_Setup() < 0)
 	{
-		printf("Capture function Open ERROR.\n");
+		printf("Capture function Open ERROR...\n");
 		XY_Debug_Send_At_Once("Capture function Open ERROR.\n");
 	}
+#if 0
+	XY_Start_Capture();
+	while(1)
+	{
+		sleep(5);
+	}
+#endif
 	
 	if(DJI_Sample_Setup() < 0)
 	{
-		printf("Serial Port Open ERROR.\n");
+		printf("Serial Port Open ERROR...\n");
 		XY_Debug_Send_At_Once("Serial Port Open ERROR.\n");
 		return 0;
 	}
+	printf("Serial Port Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Serial Port Open SUCCESS.\n");	
 
 	user_act_data.app_key = temp_buf;
 	user_act_data.app_ver = SDK_VERSION;
@@ -191,7 +215,7 @@ int main(int argc,char **argv)
 		printf("ERROR:There is no user account\n");	
 		return 0;
 	}
-
+	
 	if(XY_Ultra_Setup("/dev/ttyTHS2", 9600) < 0)
 	{
 		printf("Ultra Function Open ERROR.\n");

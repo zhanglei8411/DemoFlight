@@ -13,6 +13,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
+#include <sys/time.h>
 #include "wireless_debug.h"
 
 
@@ -38,6 +40,10 @@
 #define T_11B						0xCB
 #define T_12B						0xCC
 
+#define ULTRA_ANALYSIS_NUM	4
+
+#define ULTRA_GET_ID_A 0x02
+#define ULTRA_GET_ID_B 0x04
 
 struct ks103_adapter{
 	unsigned char cmd;
@@ -45,11 +51,18 @@ struct ks103_adapter{
 	int retries;
 };
 
-typedef float UltraData;
+typedef float __Ultra;
+
+typedef struct{
+	__Ultra _ultra;
+	int gotten;
+}Ultra_Data;
+
+
 
 int KS103_Send(unsigned char *buf,int len);
 int XY_Ultra_Setup(const char *device,int baudrate);
-int XY_Get_Ultra_Data(float *_data);
-
+int XY_Get_Ultra_Data(float *_data, int _get_id);
+int ultra_calc(float _log_ultra_data);
 
 #endif
