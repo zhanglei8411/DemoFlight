@@ -1,0 +1,773 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 98.00      7.35     7.35     4185     1.76     1.76  xyVision::GetTarget::imadjust(cv::Mat_<unsigned char> const&, cv::Mat_<unsigned char>&, int, cv::Vec<int, 2>, cv::Vec<int, 2>)
+  0.40      7.38     0.03   175781     0.00     0.00  sdk_serial_byte_handle(unsigned char)
+  0.27      7.40     0.02     4185     0.00     0.00  xyVision::GetTarget::binarizeTarget(cv::Mat const&, cv::Mat&, std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >&)
+  0.27      7.42     0.02                             capture_and_identify_thread_func(void*)
+  0.27      7.44     0.02                             cv::Mat::~Mat()
+  0.13      7.45     0.01     4186     0.00     1.76  xyVision::GetTarget::adjustImg(cv::Mat&)
+  0.13      7.46     0.01     4184     0.00     1.77  xyVision::GetTarget::operator<<(cv::Mat const&)
+  0.13      7.47     0.01      714     0.01     0.01  Request_CMD_Session(unsigned short, unsigned short)
+  0.13      7.48     0.01                             PollThread(void*)
+  0.13      7.49     0.01                             SerialRecvThread(void*)
+  0.13      7.50     0.01                             cv::MatExpr::~MatExpr()
+  0.00      7.50     0.00    18395     0.00     0.00  aes_mixColumns(unsigned char*)
+  0.00      7.50     0.00    14889     0.00     0.00  aes_expandEncKey(unsigned char*, unsigned char*)
+  0.00      7.50     0.00     4186     0.00     1.76  xyVision::GetTarget::runOneFrame()
+  0.00      7.50     0.00     2396     0.00     0.00  Pro_Link_Recv_Hook(ProHeader*)
+  0.00      7.50     0.00     2395     0.00     0.00  sdk_call_data_app(SDKFilter*)
+  0.00      7.50     0.00     2385     0.00     0.00  DJI_Pro_App_Recv_Req_Data(ProHeader*)
+  0.00      7.50     0.00     1415     0.00     0.00  aes256_encrypt_ecb(tagAES256Context*, unsigned char*)
+  0.00      7.50     0.00      724     0.00     0.00  Get_Memory_Lock()
+  0.00      7.50     0.00      724     0.00     0.00  Free_Memory_Lock()
+  0.00      7.50     0.00      714     0.00     0.00  Request_Memory(unsigned short)
+  0.00      7.50     0.00      714     0.00     0.00  Free_CMD_Session(CMD_Session_Tab*)
+  0.00      7.50     0.00      714     0.00     0.01  Pro_Send_Interface(ProSendParameter*)
+  0.00      7.50     0.00      714     0.00     0.00  sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short)
+  0.00      7.50     0.00      713     0.00     0.00  Pro_Hw_Send(unsigned char*, int)
+  0.00      7.50     0.00      712     0.00     0.00  XY_Debug_Get_Pos(position*, double, double, double, float)
+  0.00      7.50     0.00      710     0.00     0.00  DJI_Pro_Get_Pos(api_pos_data_t*)
+  0.00      7.50     0.00      709     0.00     0.00  DJI_Pro_Get_GroundVo(api_vel_data_t*)
+  0.00      7.50     0.00      708     0.00     0.00  XY_Debug_Get_UserCtrl(attitude*, float, float, float, float)
+  0.00      7.50     0.00      708     0.00     0.00  XY_Debug_Get_Last_Dist(double*, double)
+  0.00      7.50     0.00      702     0.00     0.01  DJI_Pro_Attitude_Control(attitude_data_t*)
+  0.00      7.50     0.00      643     0.00     0.00  read_refresh_flag()
+  0.00      7.50     0.00      562     0.00     0.00  XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*)
+  0.00      7.50     0.00      454     0.00     0.00  XYZ2xyz(api_pos_data_t, XYZ, XYZ*)
+  0.00      7.50     0.00      146     0.00     0.00  XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*)
+  0.00      7.50     0.00       81     0.00     0.00  XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*)
+  0.00      7.50     0.00       81     0.00     0.00  XY_Debug_Get_Zhanglei_Data(Zhanglei*, double, double)
+  0.00      7.50     0.00       28     0.00     0.00  tinyxml2::StrPair::GetStr()
+  0.00      7.50     0.00       18     0.00     0.00  tinyxml2::StrPair::ParseName(char*)
+  0.00      7.50     0.00       12     0.00     0.00  tinyxml2::XMLDocument::Identify(char*, tinyxml2::XMLNode**)
+  0.00      7.50     0.00       12     0.00     0.00  tinyxml2::XMLNode::~XMLNode()
+  0.00      7.50     0.00       10     0.00     0.00  tinyxml2::XMLAttribute::ParseDeep(char*, bool)
+  0.00      7.50     0.00       10     0.00     0.00  tinyxml2::XMLAttribute::~XMLAttribute()
+  0.00      7.50     0.00       10     0.00     0.00  tinyxml2::MemPoolT<36>::SetTracked()
+  0.00      7.50     0.00       10     0.00     0.00  tinyxml2::MemPoolT<36>::Free(void*)
+  0.00      7.50     0.00       10     0.00     0.00  xyVision::GetTarget::getCurrentLoc()
+  0.00      7.50     0.00       10     0.00     0.00  tinyxml2::XMLElement::ToElement() const
+  0.00      7.50     0.00       10     0.00     0.00  parse_file
+  0.00      7.50     0.00       10     0.00     0.00  read_profile_float
+  0.00      7.50     0.00       10     0.00     0.00  read_profile_string
+  0.00      7.50     0.00        8     0.00     0.00  DJI_Pro_Status_Ctrl_CallBack(ProHeader*)
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLElement::ParseAttributes(char*)
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*)
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLElement::ToElement()
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLElement::~XMLElement()
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLNode::ToDeclaration()
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::MemPoolT<52>::SetTracked()
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::MemPoolT<52>::Free(void*)
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLNode::ToDocument() const
+  0.00      7.50     0.00        8     0.00     0.00  tinyxml2::XMLNode::FirstChildElement(char const*) const
+  0.00      7.50     0.00        5     0.00     0.00  tinyxml2::XMLAttribute::Value() const
+  0.00      7.50     0.00        5     0.00     0.00  std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >::operator=(std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > const&)
+  0.00      7.50     0.00        4     0.00     0.00  DJI_Pro_Status_Ctrl(unsigned char, void (*)(unsigned short))
+  0.00      7.50     0.00        4     0.00     0.00  tinyxml2::XMLNode::ToElement() const
+  0.00      7.50     0.00        2     0.00     0.00  XY_Debug_Easy_Send(char*, int)
+  0.00      7.50     0.00        2     0.00     0.00  Get_CMD_Session_Tab()
+  0.00      7.50     0.00        2     0.00     0.00  temporary_init_route_list()
+  0.00      7.50     0.00        2     0.00     0.00  obtain_io(int*)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDocument::Parse()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDocument::LoadFile(_IO_FILE*)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDocument::LoadFile(char const*)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDocument::XMLDocument(bool, tinyxml2::Whitespace)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDocument::~XMLDocument()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDeclaration::ToDeclaration()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDeclaration::ParseDeep(char*, tinyxml2::StrPair*)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLDeclaration::~XMLDeclaration()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*)
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::XMLNode::ToElement()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::MemPoolT<44>::SetTracked()
+  0.00      7.50     0.00        2     0.00     0.00  tinyxml2::MemPoolT<44>::Free(void*)
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z10SerialOpenPKc
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z13handle_signali
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z18Pro_Link_Recv_HookP9ProHeader
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z20DJI_Sample_Atti_Ctrlv
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z7geo2XYZ14api_pos_data_tP3XYZ
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I__ZN8xyVision9GetTargetC2ESs
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I_adapter
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I_debug_package
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I_mark_offset
+  0.00      7.50     0.00        1     0.00     0.00  _GLOBAL__sub_I_route_head
+  0.00      7.50     0.00        1     0.00     0.00  KS103_Config(int, char, char, char)
+  0.00      7.50     0.00        1     0.00     0.00  Pro_Hw_Setup(char const*, int)
+  0.00      7.50     0.00        1     0.00     0.00  SerialConfig(int, char, char, char)
+  0.00      7.50     0.00        1     0.00     0.00  DJI_Pro_Setup(void (*)(ProHeader*))
+  0.00      7.50     0.00        1     0.00     0.00  Pro_Link_Setup()
+  0.00      7.50     0.00        1     0.00     0.00  DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*)
+  0.00      7.50     0.00        1     0.00     0.00  DJI_Pro_Rmu_Setup()
+  0.00      7.50     0.00        1     0.00     0.00  uart_common_start(char const*, int, int*, fd_set*)
+  0.00      7.50     0.00        1     0.00     0.00  clear_refresh_flag()
+  0.00      7.50     0.00        1     0.00     0.00  uart_common_config(int, int, char, char, char)
+  0.00      7.50     0.00        1     0.00     0.00  Get_ACK_Session_Tab()
+  0.00      7.50     0.00        1     0.00     0.00  Pro_App_Recv_Set_Hook(void (*)(ProHeader*))
+  0.00      7.50     0.00        1     0.00     0.00  get_stored_offset_block()
+  0.00      7.50     0.00        1     0.00     0.00  XY_Debug_Get_Offset_Data(Offset*, Offset)
+  0.00      7.50     0.00        1     0.00     0.00  Pro_Config_Comm_Encrypt_Key(char const*)
+  0.00      7.50     0.00        1     0.00     0.00  DJI_Pro_Activate_API_CallBack(ProHeader*)
+  0.00      7.50     0.00        1     0.00     0.00  DJI_Pro_Control_Management_CallBack(ProHeader*)
+  0.00      7.50     0.00        1     0.00     0.00  xyVision::GetTarget::setCameraParams(std::string)
+  0.00      7.50     0.00        1     0.00     0.00  xyVision::GetTarget::GetTarget(std::string)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 4 byte(s) for 0.13% of 7.50 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     98.8    0.02    7.39                 capture_and_identify_thread_func(void*) [1]
+                0.01    7.38    4184/4184        xyVision::GetTarget::operator<<(cv::Mat const&) [2]
+                0.00    0.00      10/10          xyVision::GetTarget::getCurrentLoc() [65]
+                0.00    0.00       1/1           xyVision::GetTarget::GetTarget(std::string) [125]
+-----------------------------------------------
+                0.01    7.38    4184/4184        capture_and_identify_thread_func(void*) [1]
+[2]     98.5    0.01    7.38    4184         xyVision::GetTarget::operator<<(cv::Mat const&) [2]
+                0.00    7.38    4186/4186        xyVision::GetTarget::runOneFrame() [3]
+-----------------------------------------------
+                0.00    7.38    4186/4186        xyVision::GetTarget::operator<<(cv::Mat const&) [2]
+[3]     98.4    0.00    7.38    4186         xyVision::GetTarget::runOneFrame() [3]
+                0.01    7.35    4186/4186        xyVision::GetTarget::adjustImg(cv::Mat&) [4]
+                0.02    0.00    4185/4185        xyVision::GetTarget::binarizeTarget(cv::Mat const&, cv::Mat&, std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >&) [8]
+-----------------------------------------------
+                0.01    7.35    4186/4186        xyVision::GetTarget::runOneFrame() [3]
+[4]     98.1    0.01    7.35    4186         xyVision::GetTarget::adjustImg(cv::Mat&) [4]
+                7.35    0.00    4185/4185        xyVision::GetTarget::imadjust(cv::Mat_<unsigned char> const&, cv::Mat_<unsigned char>&, int, cv::Vec<int, 2>, cv::Vec<int, 2>) [5]
+-----------------------------------------------
+                7.35    0.00    4185/4185        xyVision::GetTarget::adjustImg(cv::Mat&) [4]
+[5]     98.0    7.35    0.00    4185         xyVision::GetTarget::imadjust(cv::Mat_<unsigned char> const&, cv::Mat_<unsigned char>&, int, cv::Vec<int, 2>, cv::Vec<int, 2>) [5]
+-----------------------------------------------
+                                                 <spontaneous>
+[6]      0.5    0.01    0.03                 SerialRecvThread(void*) [6]
+                0.03    0.00  175781/175781      sdk_serial_byte_handle(unsigned char) [7]
+-----------------------------------------------
+                0.03    0.00  175781/175781      SerialRecvThread(void*) [6]
+[7]      0.4    0.03    0.00  175781         sdk_serial_byte_handle(unsigned char) [7]
+                0.00    0.00    2395/2395        sdk_call_data_app(SDKFilter*) [37]
+-----------------------------------------------
+                0.02    0.00    4185/4185        xyVision::GetTarget::runOneFrame() [3]
+[8]      0.3    0.02    0.00    4185         xyVision::GetTarget::binarizeTarget(cv::Mat const&, cv::Mat&, std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >&) [8]
+                0.00    0.00       5/5           std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >::operator=(std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > const&) [78]
+-----------------------------------------------
+                                                 <spontaneous>
+[9]      0.3    0.02    0.00                 cv::Mat::~Mat() [9]
+-----------------------------------------------
+                0.00    0.00       1/714         Activate_API_Thread_Func(void*) [19]
+                0.00    0.00       2/714         DJI_Pro_Control_Management(unsigned char, void (*)(unsigned short)) [18]
+                0.00    0.00       8/714         Status_Ctrl_Thread_Func(void*) [17]
+                0.00    0.01     703/714         DJI_Pro_Attitude_Control(attitude_data_t*) [14]
+[10]     0.1    0.00    0.01     714         Pro_Send_Interface(ProSendParameter*) [10]
+                0.01    0.00     714/714         Request_CMD_Session(unsigned short, unsigned short) [11]
+                0.00    0.00     714/724         Get_Memory_Lock() [40]
+                0.00    0.00     714/714         sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short) [44]
+                0.00    0.00     714/724         Free_Memory_Lock() [41]
+                0.00    0.00     713/713         Pro_Hw_Send(unsigned char*, int) [45]
+                0.00    0.00     704/714         Free_CMD_Session(CMD_Session_Tab*) [43]
+-----------------------------------------------
+                0.01    0.00     714/714         Pro_Send_Interface(ProSendParameter*) [10]
+[11]     0.1    0.01    0.00     714         Request_CMD_Session(unsigned short, unsigned short) [11]
+                0.00    0.00     714/714         Request_Memory(unsigned short) [42]
+-----------------------------------------------
+                                                 <spontaneous>
+[12]     0.1    0.01    0.00                 PollThread(void*) [12]
+                0.00    0.00       1/2           Get_CMD_Session_Tab() [82]
+-----------------------------------------------
+                                                 <spontaneous>
+[13]     0.1    0.01    0.00                 cv::MatExpr::~MatExpr() [13]
+-----------------------------------------------
+                0.00    0.00     144/702         XY_Aircraft_P2P_Thread_Func(void*) [16]
+                0.00    0.01     558/702         XY_Aircraft_UpDown_Thread_Func(void*) [15]
+[14]     0.1    0.00    0.01     702         DJI_Pro_Attitude_Control(attitude_data_t*) [14]
+                0.00    0.01     703/714         Pro_Send_Interface(ProSendParameter*) [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[15]     0.1    0.00    0.01                 XY_Aircraft_UpDown_Thread_Func(void*) [15]
+                0.00    0.01     558/702         DJI_Pro_Attitude_Control(attitude_data_t*) [14]
+                0.00    0.00     563/709         DJI_Pro_Get_GroundVo(api_vel_data_t*) [48]
+                0.00    0.00     562/710         DJI_Pro_Get_Pos(api_pos_data_t*) [47]
+                0.00    0.00     562/562         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+-----------------------------------------------
+                                                 <spontaneous>
+[16]     0.0    0.00    0.00                 XY_Aircraft_P2P_Thread_Func(void*) [16]
+                0.00    0.00     144/702         DJI_Pro_Attitude_Control(attitude_data_t*) [14]
+                0.00    0.00     146/710         DJI_Pro_Get_Pos(api_pos_data_t*) [47]
+                0.00    0.00     146/709         DJI_Pro_Get_GroundVo(api_vel_data_t*) [48]
+                0.00    0.00     146/146         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+-----------------------------------------------
+                                                 <spontaneous>
+[17]     0.0    0.00    0.00                 Status_Ctrl_Thread_Func(void*) [17]
+                0.00    0.00       8/714         Pro_Send_Interface(ProSendParameter*) [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[18]     0.0    0.00    0.00                 DJI_Pro_Control_Management(unsigned char, void (*)(unsigned short)) [18]
+                0.00    0.00       2/714         Pro_Send_Interface(ProSendParameter*) [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[19]     0.0    0.00    0.00                 Activate_API_Thread_Func(void*) [19]
+                0.00    0.00       1/714         Pro_Send_Interface(ProSendParameter*) [10]
+-----------------------------------------------
+[20]     0.0    0.00    0.00       8+12      <cycle 1 as a whole> [20]
+                0.00    0.00      12             tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+                0.00    0.00       8             tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+-----------------------------------------------
+                0.00    0.00      10/10          read_profile_string [23]
+[21]     0.0    0.00    0.00      10         parse_file [21]
+-----------------------------------------------
+                0.00    0.00      10/10          xyVision::GetTarget::setCameraParams(std::string) [124]
+[22]     0.0    0.00    0.00      10         read_profile_float [22]
+                0.00    0.00      10/10          read_profile_string [23]
+-----------------------------------------------
+                0.00    0.00      10/10          read_profile_float [22]
+[23]     0.0    0.00    0.00      10         read_profile_string [23]
+                0.00    0.00      10/10          parse_file [21]
+-----------------------------------------------
+                0.00    0.00   18395/18395       aes256_encrypt_ecb(tagAES256Context*, unsigned char*) [39]
+[34]     0.0    0.00    0.00   18395         aes_mixColumns(unsigned char*) [34]
+-----------------------------------------------
+                0.00    0.00    4984/14889       sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short) [44]
+                0.00    0.00    9905/14889       aes256_encrypt_ecb(tagAES256Context*, unsigned char*) [39]
+[35]     0.0    0.00    0.00   14889         aes_expandEncKey(unsigned char*, unsigned char*) [35]
+-----------------------------------------------
+                0.00    0.00    2396/2396        sdk_call_data_app(SDKFilter*) [37]
+[36]     0.0    0.00    0.00    2396         Pro_Link_Recv_Hook(ProHeader*) [36]
+                0.00    0.00    2385/2385        DJI_Pro_App_Recv_Req_Data(ProHeader*) [38]
+                0.00    0.00      10/724         Get_Memory_Lock() [40]
+                0.00    0.00      10/714         Free_CMD_Session(CMD_Session_Tab*) [43]
+                0.00    0.00      10/724         Free_Memory_Lock() [41]
+                0.00    0.00       8/8           DJI_Pro_Status_Ctrl_CallBack(ProHeader*) [67]
+                0.00    0.00       1/2           Get_CMD_Session_Tab() [82]
+                0.00    0.00       1/1           Get_ACK_Session_Tab() [117]
+                0.00    0.00       1/1           DJI_Pro_Control_Management_CallBack(ProHeader*) [123]
+                0.00    0.00       1/1           DJI_Pro_Activate_API_CallBack(ProHeader*) [122]
+-----------------------------------------------
+                0.00    0.00    2395/2395        sdk_serial_byte_handle(unsigned char) [7]
+[37]     0.0    0.00    0.00    2395         sdk_call_data_app(SDKFilter*) [37]
+                0.00    0.00    2396/2396        Pro_Link_Recv_Hook(ProHeader*) [36]
+-----------------------------------------------
+                0.00    0.00    2385/2385        Pro_Link_Recv_Hook(ProHeader*) [36]
+[38]     0.0    0.00    0.00    2385         DJI_Pro_App_Recv_Req_Data(ProHeader*) [38]
+-----------------------------------------------
+                0.00    0.00    1415/1415        sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short) [44]
+[39]     0.0    0.00    0.00    1415         aes256_encrypt_ecb(tagAES256Context*, unsigned char*) [39]
+                0.00    0.00   18395/18395       aes_mixColumns(unsigned char*) [34]
+                0.00    0.00    9905/14889       aes_expandEncKey(unsigned char*, unsigned char*) [35]
+-----------------------------------------------
+                0.00    0.00      10/724         Pro_Link_Recv_Hook(ProHeader*) [36]
+                0.00    0.00     714/724         Pro_Send_Interface(ProSendParameter*) [10]
+[40]     0.0    0.00    0.00     724         Get_Memory_Lock() [40]
+-----------------------------------------------
+                0.00    0.00      10/724         Pro_Link_Recv_Hook(ProHeader*) [36]
+                0.00    0.00     714/724         Pro_Send_Interface(ProSendParameter*) [10]
+[41]     0.0    0.00    0.00     724         Free_Memory_Lock() [41]
+-----------------------------------------------
+                0.00    0.00     714/714         Request_CMD_Session(unsigned short, unsigned short) [11]
+[42]     0.0    0.00    0.00     714         Request_Memory(unsigned short) [42]
+-----------------------------------------------
+                0.00    0.00      10/714         Pro_Link_Recv_Hook(ProHeader*) [36]
+                0.00    0.00     704/714         Pro_Send_Interface(ProSendParameter*) [10]
+[43]     0.0    0.00    0.00     714         Free_CMD_Session(CMD_Session_Tab*) [43]
+-----------------------------------------------
+                0.00    0.00     714/714         Pro_Send_Interface(ProSendParameter*) [10]
+[44]     0.0    0.00    0.00     714         sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short) [44]
+                0.00    0.00    4984/14889       aes_expandEncKey(unsigned char*, unsigned char*) [35]
+                0.00    0.00    1415/1415        aes256_encrypt_ecb(tagAES256Context*, unsigned char*) [39]
+-----------------------------------------------
+                0.00    0.00     713/713         Pro_Send_Interface(ProSendParameter*) [10]
+[45]     0.0    0.00    0.00     713         Pro_Hw_Send(unsigned char*, int) [45]
+-----------------------------------------------
+                0.00    0.00       4/712         temporary_init_route_list() [83]
+                0.00    0.00     146/712         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+                0.00    0.00     562/712         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[46]     0.0    0.00    0.00     712         XY_Debug_Get_Pos(position*, double, double, double, float) [46]
+-----------------------------------------------
+                0.00    0.00       2/710         temporary_init_route_list() [83]
+                0.00    0.00     146/710         XY_Aircraft_P2P_Thread_Func(void*) [16]
+                0.00    0.00     562/710         XY_Aircraft_UpDown_Thread_Func(void*) [15]
+[47]     0.0    0.00    0.00     710         DJI_Pro_Get_Pos(api_pos_data_t*) [47]
+-----------------------------------------------
+                0.00    0.00     146/709         XY_Aircraft_P2P_Thread_Func(void*) [16]
+                0.00    0.00     563/709         XY_Aircraft_UpDown_Thread_Func(void*) [15]
+[48]     0.0    0.00    0.00     709         DJI_Pro_Get_GroundVo(api_vel_data_t*) [48]
+-----------------------------------------------
+                0.00    0.00     146/708         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+                0.00    0.00     562/708         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[49]     0.0    0.00    0.00     708         XY_Debug_Get_UserCtrl(attitude*, float, float, float, float) [49]
+-----------------------------------------------
+                0.00    0.00     146/708         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+                0.00    0.00     562/708         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[50]     0.0    0.00    0.00     708         XY_Debug_Get_Last_Dist(double*, double) [50]
+-----------------------------------------------
+                0.00    0.00      81/643         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+                0.00    0.00     562/643         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[51]     0.0    0.00    0.00     643         read_refresh_flag() [51]
+-----------------------------------------------
+                0.00    0.00     562/562         XY_Aircraft_UpDown_Thread_Func(void*) [15]
+[52]     0.0    0.00    0.00     562         XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+                0.00    0.00     562/643         read_refresh_flag() [51]
+                0.00    0.00     562/708         XY_Debug_Get_UserCtrl(attitude*, float, float, float, float) [49]
+                0.00    0.00     562/712         XY_Debug_Get_Pos(position*, double, double, double, float) [46]
+                0.00    0.00     562/708         XY_Debug_Get_Last_Dist(double*, double) [50]
+                0.00    0.00       1/1           get_stored_offset_block() [119]
+                0.00    0.00       1/1           clear_refresh_flag() [115]
+                0.00    0.00       1/1           XY_Debug_Get_Offset_Data(Offset*, Offset) [120]
+-----------------------------------------------
+                0.00    0.00     162/454         XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*) [55]
+                0.00    0.00     292/454         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+[53]     0.0    0.00    0.00     454         XYZ2xyz(api_pos_data_t, XYZ, XYZ*) [53]
+-----------------------------------------------
+                0.00    0.00     146/146         XY_Aircraft_P2P_Thread_Func(void*) [16]
+[54]     0.0    0.00    0.00     146         XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+                0.00    0.00     292/454         XYZ2xyz(api_pos_data_t, XYZ, XYZ*) [53]
+                0.00    0.00     146/708         XY_Debug_Get_UserCtrl(attitude*, float, float, float, float) [49]
+                0.00    0.00     146/712         XY_Debug_Get_Pos(position*, double, double, double, float) [46]
+                0.00    0.00     146/708         XY_Debug_Get_Last_Dist(double*, double) [50]
+                0.00    0.00      81/81          XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*) [55]
+                0.00    0.00      81/643         read_refresh_flag() [51]
+-----------------------------------------------
+                0.00    0.00      81/81          XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [54]
+[55]     0.0    0.00    0.00      81         XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*) [55]
+                0.00    0.00     162/454         XYZ2xyz(api_pos_data_t, XYZ, XYZ*) [53]
+                0.00    0.00      81/81          XY_Debug_Get_Zhanglei_Data(Zhanglei*, double, double) [56]
+-----------------------------------------------
+                0.00    0.00      81/81          XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*) [55]
+[56]     0.0    0.00    0.00      81         XY_Debug_Get_Zhanglei_Data(Zhanglei*, double, double) [56]
+-----------------------------------------------
+                0.00    0.00       4/28          tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00       6/28          tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+                0.00    0.00      18/28          tinyxml2::XMLElement::ParseAttributes(char*) [68]
+[57]     0.0    0.00    0.00      28         tinyxml2::StrPair::GetStr() [57]
+-----------------------------------------------
+                0.00    0.00       8/18          tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*) [69]
+                0.00    0.00      10/18          tinyxml2::XMLAttribute::ParseDeep(char*, bool) [61]
+[58]     0.0    0.00    0.00      18         tinyxml2::StrPair::ParseName(char*) [58]
+-----------------------------------------------
+                0.00    0.00      12/12          tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[59]     0.0    0.00    0.00      12         tinyxml2::XMLDocument::Identify(char*, tinyxml2::XMLNode**) [59]
+-----------------------------------------------
+                                   8             tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+                0.00    0.00       2/8           tinyxml2::XMLDeclaration::~XMLDeclaration() [92]
+                0.00    0.00       2/8           tinyxml2::XMLDocument::~XMLDocument() [89]
+[60]     0.0    0.00    0.00      12         tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+                0.00    0.00       4/8           tinyxml2::MemPoolT<52>::Free(void*) [74]
+                                   4             tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+-----------------------------------------------
+                0.00    0.00      10/10          tinyxml2::XMLElement::ParseAttributes(char*) [68]
+[61]     0.0    0.00    0.00      10         tinyxml2::XMLAttribute::ParseDeep(char*, bool) [61]
+                0.00    0.00      10/18          tinyxml2::StrPair::ParseName(char*) [58]
+-----------------------------------------------
+                0.00    0.00      10/10          tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+[62]     0.0    0.00    0.00      10         tinyxml2::XMLAttribute::~XMLAttribute() [62]
+-----------------------------------------------
+                0.00    0.00      10/10          tinyxml2::XMLElement::ParseAttributes(char*) [68]
+[63]     0.0    0.00    0.00      10         tinyxml2::MemPoolT<36>::SetTracked() [63]
+-----------------------------------------------
+                0.00    0.00      10/10          tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+[64]     0.0    0.00    0.00      10         tinyxml2::MemPoolT<36>::Free(void*) [64]
+-----------------------------------------------
+                0.00    0.00      10/10          capture_and_identify_thread_func(void*) [1]
+[65]     0.0    0.00    0.00      10         xyVision::GetTarget::getCurrentLoc() [65]
+-----------------------------------------------
+                0.00    0.00      10/10          tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+[66]     0.0    0.00    0.00      10         tinyxml2::XMLElement::ToElement() const [66]
+-----------------------------------------------
+                0.00    0.00       8/8           Pro_Link_Recv_Hook(ProHeader*) [36]
+[67]     0.0    0.00    0.00       8         DJI_Pro_Status_Ctrl_CallBack(ProHeader*) [67]
+-----------------------------------------------
+                0.00    0.00       8/8           tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*) [69]
+[68]     0.0    0.00    0.00       8         tinyxml2::XMLElement::ParseAttributes(char*) [68]
+                0.00    0.00      18/28          tinyxml2::StrPair::GetStr() [57]
+                0.00    0.00      10/10          tinyxml2::MemPoolT<36>::SetTracked() [63]
+                0.00    0.00      10/10          tinyxml2::XMLAttribute::ParseDeep(char*, bool) [61]
+-----------------------------------------------
+                0.00    0.00       8/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[69]     0.0    0.00    0.00       8         tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*) [69]
+                0.00    0.00       8/18          tinyxml2::StrPair::ParseName(char*) [58]
+                0.00    0.00       8/8           tinyxml2::XMLElement::ParseAttributes(char*) [68]
+-----------------------------------------------
+                0.00    0.00       8/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[70]     0.0    0.00    0.00       8         tinyxml2::XMLElement::ToElement() [70]
+-----------------------------------------------
+                                   4             tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+                0.00    0.00       2/8           tinyxml2::XMLDocument::~XMLDocument() [89]
+                0.00    0.00       2/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[71]     0.0    0.00    0.00       8         tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+                0.00    0.00      10/10          tinyxml2::XMLAttribute::~XMLAttribute() [62]
+                0.00    0.00      10/10          tinyxml2::MemPoolT<36>::Free(void*) [64]
+                                   8             tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+-----------------------------------------------
+                0.00    0.00       8/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[72]     0.0    0.00    0.00       8         tinyxml2::XMLNode::ToDeclaration() [72]
+-----------------------------------------------
+                0.00    0.00       8/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[73]     0.0    0.00    0.00       8         tinyxml2::MemPoolT<52>::SetTracked() [73]
+-----------------------------------------------
+                0.00    0.00       2/8           tinyxml2::XMLDocument::~XMLDocument() [89]
+                0.00    0.00       2/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00       4/8           tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+[74]     0.0    0.00    0.00       8         tinyxml2::MemPoolT<52>::Free(void*) [74]
+-----------------------------------------------
+                0.00    0.00       2/8           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00       6/8           tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+[75]     0.0    0.00    0.00       8         tinyxml2::XMLNode::ToDocument() const [75]
+-----------------------------------------------
+                0.00    0.00       8/8           DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+[76]     0.0    0.00    0.00       8         tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+                0.00    0.00      10/10          tinyxml2::XMLElement::ToElement() const [66]
+                0.00    0.00       6/8           tinyxml2::XMLNode::ToDocument() const [75]
+                0.00    0.00       6/28          tinyxml2::StrPair::GetStr() [57]
+                0.00    0.00       4/4           tinyxml2::XMLNode::ToElement() const [80]
+-----------------------------------------------
+                0.00    0.00       5/5           DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+[77]     0.0    0.00    0.00       5         tinyxml2::XMLAttribute::Value() const [77]
+-----------------------------------------------
+                0.00    0.00       5/5           xyVision::GetTarget::binarizeTarget(cv::Mat const&, cv::Mat&, std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >&) [8]
+[78]     0.0    0.00    0.00       5         std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >::operator=(std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > const&) [78]
+-----------------------------------------------
+                0.00    0.00       4/4           Route_Task_Thread_Func(void*) [242]
+[79]     0.0    0.00    0.00       4         DJI_Pro_Status_Ctrl(unsigned char, void (*)(unsigned short)) [79]
+-----------------------------------------------
+                0.00    0.00       4/4           tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+[80]     0.0    0.00    0.00       4         tinyxml2::XMLNode::ToElement() const [80]
+-----------------------------------------------
+                0.00    0.00       2/2           temporary_init_route_list() [83]
+[81]     0.0    0.00    0.00       2         XY_Debug_Easy_Send(char*, int) [81]
+-----------------------------------------------
+                0.00    0.00       1/2           PollThread(void*) [12]
+                0.00    0.00       1/2           Pro_Link_Recv_Hook(ProHeader*) [36]
+[82]     0.0    0.00    0.00       2         Get_CMD_Session_Tab() [82]
+-----------------------------------------------
+                0.00    0.00       2/2           Route_Task_Thread_Func(void*) [242]
+[83]     0.0    0.00    0.00       2         temporary_init_route_list() [83]
+                0.00    0.00       4/712         XY_Debug_Get_Pos(position*, double, double, double, float) [46]
+                0.00    0.00       2/710         DJI_Pro_Get_Pos(api_pos_data_t*) [47]
+                0.00    0.00       2/2           XY_Debug_Easy_Send(char*, int) [81]
+-----------------------------------------------
+                0.00    0.00       1/2           XY_Load_Goods() [148]
+                0.00    0.00       1/2           XY_Unload_Goods() [154]
+[84]     0.0    0.00    0.00       2         obtain_io(int*) [84]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLDocument::LoadFile(_IO_FILE*) [86]
+[85]     0.0    0.00    0.00       2         tinyxml2::XMLDocument::Parse() [85]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLDocument::LoadFile(char const*) [87]
+[86]     0.0    0.00    0.00       2         tinyxml2::XMLDocument::LoadFile(_IO_FILE*) [86]
+                0.00    0.00       2/2           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::Parse() [85]
+-----------------------------------------------
+                0.00    0.00       2/2           DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+[87]     0.0    0.00    0.00       2         tinyxml2::XMLDocument::LoadFile(char const*) [87]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::LoadFile(_IO_FILE*) [86]
+-----------------------------------------------
+                0.00    0.00       2/2           DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+[88]     0.0    0.00    0.00       2         tinyxml2::XMLDocument::XMLDocument(bool, tinyxml2::Whitespace) [88]
+-----------------------------------------------
+                0.00    0.00       2/2           DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+[89]     0.0    0.00    0.00       2         tinyxml2::XMLDocument::~XMLDocument() [89]
+                0.00    0.00       2/8           tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+                0.00    0.00       2/2           tinyxml2::XMLDeclaration::~XMLDeclaration() [92]
+                0.00    0.00       2/8           tinyxml2::MemPoolT<52>::Free(void*) [74]
+                0.00    0.00       2/2           tinyxml2::MemPoolT<44>::Free(void*) [96]
+                0.00    0.00       2/8           tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[90]     0.0    0.00    0.00       2         tinyxml2::XMLDeclaration::ToDeclaration() [90]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[91]     0.0    0.00    0.00       2         tinyxml2::XMLDeclaration::ParseDeep(char*, tinyxml2::StrPair*) [91]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLDocument::~XMLDocument() [89]
+[92]     0.0    0.00    0.00       2         tinyxml2::XMLDeclaration::~XMLDeclaration() [92]
+                0.00    0.00       2/8           tinyxml2::XMLNode::~XMLNode() <cycle 1> [60]
+-----------------------------------------------
+                                   2             tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::LoadFile(_IO_FILE*) [86]
+[93]     0.0    0.00    0.00       2+2       tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+                0.00    0.00      12/12          tinyxml2::XMLDocument::Identify(char*, tinyxml2::XMLNode**) [59]
+                0.00    0.00       8/8           tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*) [69]
+                0.00    0.00       8/8           tinyxml2::XMLNode::ToDeclaration() [72]
+                0.00    0.00       8/8           tinyxml2::XMLElement::ToElement() [70]
+                0.00    0.00       8/8           tinyxml2::MemPoolT<52>::SetTracked() [73]
+                0.00    0.00       4/28          tinyxml2::StrPair::GetStr() [57]
+                0.00    0.00       2/2           tinyxml2::XMLDeclaration::ParseDeep(char*, tinyxml2::StrPair*) [91]
+                0.00    0.00       2/2           tinyxml2::XMLDeclaration::ToDeclaration() [90]
+                0.00    0.00       2/2           tinyxml2::XMLNode::ToElement() [94]
+                0.00    0.00       2/8           tinyxml2::XMLNode::ToDocument() const [75]
+                0.00    0.00       2/2           tinyxml2::MemPoolT<44>::SetTracked() [95]
+                0.00    0.00       2/8           tinyxml2::XMLElement::~XMLElement() <cycle 1> [71]
+                0.00    0.00       2/8           tinyxml2::MemPoolT<52>::Free(void*) [74]
+                                   2             tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[94]     0.0    0.00    0.00       2         tinyxml2::XMLNode::ToElement() [94]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*) [93]
+[95]     0.0    0.00    0.00       2         tinyxml2::MemPoolT<44>::SetTracked() [95]
+-----------------------------------------------
+                0.00    0.00       2/2           tinyxml2::XMLDocument::~XMLDocument() [89]
+[96]     0.0    0.00    0.00       2         tinyxml2::MemPoolT<44>::Free(void*) [96]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[97]     0.0    0.00    0.00       1         _GLOBAL__sub_I__Z10SerialOpenPKc [97]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[98]     0.0    0.00    0.00       1         _GLOBAL__sub_I__Z13handle_signali [98]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[99]     0.0    0.00    0.00       1         _GLOBAL__sub_I__Z18Pro_Link_Recv_HookP9ProHeader [99]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[100]    0.0    0.00    0.00       1         _GLOBAL__sub_I__Z20DJI_Sample_Atti_Ctrlv [100]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[101]    0.0    0.00    0.00       1         _GLOBAL__sub_I__Z7geo2XYZ14api_pos_data_tP3XYZ [101]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[102]    0.0    0.00    0.00       1         _GLOBAL__sub_I__ZN8xyVision9GetTargetC2ESs [102]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[103]    0.0    0.00    0.00       1         _GLOBAL__sub_I_adapter [103]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[104]    0.0    0.00    0.00       1         _GLOBAL__sub_I_debug_package [104]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[105]    0.0    0.00    0.00       1         _GLOBAL__sub_I_mark_offset [105]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [457]
+[106]    0.0    0.00    0.00       1         _GLOBAL__sub_I_route_head [106]
+-----------------------------------------------
+                0.00    0.00       1/1           KS103_Setup(char const*, int) [133]
+[107]    0.0    0.00    0.00       1         KS103_Config(int, char, char, char) [107]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Sample_Setup() [157]
+[108]    0.0    0.00    0.00       1         Pro_Hw_Setup(char const*, int) [108]
+                0.00    0.00       1/1           SerialConfig(int, char, char, char) [109]
+-----------------------------------------------
+                0.00    0.00       1/1           Pro_Hw_Setup(char const*, int) [108]
+[109]    0.0    0.00    0.00       1         SerialConfig(int, char, char, char) [109]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Sample_Setup() [157]
+[110]    0.0    0.00    0.00       1         DJI_Pro_Setup(void (*)(ProHeader*)) [110]
+                0.00    0.00       1/1           Pro_Link_Setup() [111]
+                0.00    0.00       1/1           Pro_App_Recv_Set_Hook(void (*)(ProHeader*)) [118]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Pro_Setup(void (*)(ProHeader*)) [110]
+[111]    0.0    0.00    0.00       1         Pro_Link_Setup() [111]
+                0.00    0.00       1/1           DJI_Pro_Rmu_Setup() [113]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Sample_Setup() [157]
+[112]    0.0    0.00    0.00       1         DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [112]
+                0.00    0.00       8/8           tinyxml2::XMLNode::FirstChildElement(char const*) const [76]
+                0.00    0.00       5/5           tinyxml2::XMLAttribute::Value() const [77]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::XMLDocument(bool, tinyxml2::Whitespace) [88]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::LoadFile(char const*) [87]
+                0.00    0.00       2/2           tinyxml2::XMLDocument::~XMLDocument() [89]
+-----------------------------------------------
+                0.00    0.00       1/1           Pro_Link_Setup() [111]
+[113]    0.0    0.00    0.00       1         DJI_Pro_Rmu_Setup() [113]
+-----------------------------------------------
+                0.00    0.00       1/1           XY_Debug_Setup() [152]
+[114]    0.0    0.00    0.00       1         uart_common_start(char const*, int, int*, fd_set*) [114]
+                0.00    0.00       1/1           uart_common_config(int, int, char, char, char) [116]
+-----------------------------------------------
+                0.00    0.00       1/1           XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[115]    0.0    0.00    0.00       1         clear_refresh_flag() [115]
+-----------------------------------------------
+                0.00    0.00       1/1           uart_common_start(char const*, int, int*, fd_set*) [114]
+[116]    0.0    0.00    0.00       1         uart_common_config(int, int, char, char, char) [116]
+-----------------------------------------------
+                0.00    0.00       1/1           Pro_Link_Recv_Hook(ProHeader*) [36]
+[117]    0.0    0.00    0.00       1         Get_ACK_Session_Tab() [117]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Pro_Setup(void (*)(ProHeader*)) [110]
+[118]    0.0    0.00    0.00       1         Pro_App_Recv_Set_Hook(void (*)(ProHeader*)) [118]
+-----------------------------------------------
+                0.00    0.00       1/1           XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[119]    0.0    0.00    0.00       1         get_stored_offset_block() [119]
+-----------------------------------------------
+                0.00    0.00       1/1           XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [52]
+[120]    0.0    0.00    0.00       1         XY_Debug_Get_Offset_Data(Offset*, Offset) [120]
+-----------------------------------------------
+                0.00    0.00       1/1           DJI_Pro_Activate_API_CallBack(ProHeader*) [122]
+[121]    0.0    0.00    0.00       1         Pro_Config_Comm_Encrypt_Key(char const*) [121]
+-----------------------------------------------
+                0.00    0.00       1/1           Pro_Link_Recv_Hook(ProHeader*) [36]
+[122]    0.0    0.00    0.00       1         DJI_Pro_Activate_API_CallBack(ProHeader*) [122]
+                0.00    0.00       1/1           Pro_Config_Comm_Encrypt_Key(char const*) [121]
+-----------------------------------------------
+                0.00    0.00       1/1           Pro_Link_Recv_Hook(ProHeader*) [36]
+[123]    0.0    0.00    0.00       1         DJI_Pro_Control_Management_CallBack(ProHeader*) [123]
+-----------------------------------------------
+                0.00    0.00       1/1           xyVision::GetTarget::GetTarget(std::string) [125]
+[124]    0.0    0.00    0.00       1         xyVision::GetTarget::setCameraParams(std::string) [124]
+                0.00    0.00      10/10          read_profile_float [22]
+-----------------------------------------------
+                0.00    0.00       1/1           capture_and_identify_thread_func(void*) [1]
+[125]    0.0    0.00    0.00       1         xyVision::GetTarget::GetTarget(std::string) [125]
+                0.00    0.00       1/1           xyVision::GetTarget::setCameraParams(std::string) [124]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [97] _GLOBAL__sub_I__Z10SerialOpenPKc (DJI_Pro_Hw.cpp) [82] Get_CMD_Session_Tab() [89] tinyxml2::XMLDocument::~XMLDocument()
+  [98] _GLOBAL__sub_I__Z13handle_signali (main.cpp) [11] Request_CMD_Session(unsigned short, unsigned short) [61] tinyxml2::XMLAttribute::ParseDeep(char*, bool)
+  [99] _GLOBAL__sub_I__Z18Pro_Link_Recv_HookP9ProHeader (DJI_Pro_Link.cpp) [48] DJI_Pro_Get_GroundVo(api_vel_data_t*) [62] tinyxml2::XMLAttribute::~XMLAttribute()
+ [100] _GLOBAL__sub_I__Z20DJI_Sample_Atti_Ctrlv (DJI_Pro_Sample.cpp) [118] Pro_App_Recv_Set_Hook(void (*)(ProHeader*)) [90] tinyxml2::XMLDeclaration::ToDeclaration()
+ [101] _GLOBAL__sub_I__Z7geo2XYZ14api_pos_data_tP3XYZ (control_law.cpp) [49] XY_Debug_Get_UserCtrl(attitude*, float, float, float, float) [91] tinyxml2::XMLDeclaration::ParseDeep(char*, tinyxml2::StrPair*)
+ [102] _GLOBAL__sub_I__ZN8xyVision9GetTargetC2ESs (getTargetLoc.cpp) [44] sdk_encrypt_interface(unsigned char*, unsigned char const*, unsigned short, unsigned char, unsigned char, unsigned char, unsigned short) [92] tinyxml2::XMLDeclaration::~XMLDeclaration()
+ [103] _GLOBAL__sub_I_adapter (range.cpp) [50] XY_Debug_Get_Last_Dist(double*, double) [57] tinyxml2::StrPair::GetStr()
+ [104] _GLOBAL__sub_I_debug_package (wireless_debug.cpp) [7] sdk_serial_byte_handle(unsigned char) [58] tinyxml2::StrPair::ParseName(char*)
+ [105] _GLOBAL__sub_I_mark_offset (image_identify.cpp) [55] XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t, api_pos_data_t, api_pos_data_t, api_pos_data_t, float, attitude_data_t*) [72] tinyxml2::XMLNode::ToDeclaration()
+ [106] _GLOBAL__sub_I_route_head (route.cpp) [119] get_stored_offset_block() [93] tinyxml2::XMLNode::ParseDeep(char*, tinyxml2::StrPair*)
+  [45] Pro_Hw_Send(unsigned char*, int) [14] DJI_Pro_Attitude_Control(attitude_data_t*) [94] tinyxml2::XMLNode::ToElement()
+ [107] KS103_Config(int, char, char, char) [120] XY_Debug_Get_Offset_Data(Offset*, Offset) [60] tinyxml2::XMLNode::~XMLNode()
+ [108] Pro_Hw_Setup(char const*, int) [83] temporary_init_route_list() [63] tinyxml2::MemPoolT<36>::SetTracked()
+ [109] SerialConfig(int, char, char, char) [56] XY_Debug_Get_Zhanglei_Data(Zhanglei*, double, double) [64] tinyxml2::MemPoolT<36>::Free(void*)
+ [110] DJI_Pro_Setup(void (*)(ProHeader*)) [121] Pro_Config_Comm_Encrypt_Key(char const*) [95] tinyxml2::MemPoolT<44>::SetTracked()
+ [111] Pro_Link_Setup()       [54] XY_Cal_Attitude_Ctrl_Data_P2P(api_vel_data_t, api_pos_data_t, float, _Leg_Node*, attitude_data_t*, int*) [96] tinyxml2::MemPoolT<44>::Free(void*)
+  [42] Request_Memory(unsigned short) [52] XY_Cal_Attitude_Ctrl_Data_UpDown(api_vel_data_t, api_pos_data_t, float, attitude_data_t*, int*) [73] tinyxml2::MemPoolT<52>::SetTracked()
+  [34] aes_mixColumns(unsigned char*) [53] XYZ2xyz(api_pos_data_t, XYZ, XYZ*) [74] tinyxml2::MemPoolT<52>::Free(void*)
+ [112] DJI_Pro_Get_Cfg(int*, char*, unsigned int*, unsigned int*, char*) [84] obtain_io(int*) [3] xyVision::GetTarget::runOneFrame()
+  [47] DJI_Pro_Get_Pos(api_pos_data_t*) [12] PollThread(void*) (DJI_Pro_Link.cpp) [65] xyVision::GetTarget::getCurrentLoc()
+  [40] Get_Memory_Lock()       [6] SerialRecvThread(void*) (DJI_Pro_Hw.cpp) [8] xyVision::GetTarget::binarizeTarget(cv::Mat const&, cv::Mat&, std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >&)
+  [43] Free_CMD_Session(CMD_Session_Tab*) [38] DJI_Pro_App_Recv_Req_Data(ProHeader*) (DJI_Pro_App.cpp) [124] xyVision::GetTarget::setCameraParams(std::string)
+  [41] Free_Memory_Lock()     [67] DJI_Pro_Status_Ctrl_CallBack(ProHeader*) (DJI_Pro_App.cpp) [5] xyVision::GetTarget::imadjust(cv::Mat_<unsigned char> const&, cv::Mat_<unsigned char>&, int, cv::Vec<int, 2>, cv::Vec<int, 2>)
+  [46] XY_Debug_Get_Pos(position*, double, double, double, float) [122] DJI_Pro_Activate_API_CallBack(ProHeader*) (DJI_Pro_App.cpp) [4] xyVision::GetTarget::adjustImg(cv::Mat&)
+  [35] aes_expandEncKey(unsigned char*, unsigned char*) [1] capture_and_identify_thread_func(void*) (image_identify.cpp) [125] xyVision::GetTarget::GetTarget(std::string)
+ [113] DJI_Pro_Rmu_Setup()   [123] DJI_Pro_Control_Management_CallBack(ProHeader*) (DJI_Pro_App.cpp) [2] xyVision::GetTarget::operator<<(cv::Mat const&)
+  [51] read_refresh_flag()     [9] cv::Mat::~Mat()        [66] tinyxml2::XMLElement::ToElement() const
+  [37] sdk_call_data_app(SDKFilter*) [13] cv::MatExpr::~MatExpr() [77] tinyxml2::XMLAttribute::Value() const
+ [114] uart_common_start(char const*, int, int*, fd_set*) [68] tinyxml2::XMLElement::ParseAttributes(char*) [75] tinyxml2::XMLNode::ToDocument() const
+  [36] Pro_Link_Recv_Hook(ProHeader*) [69] tinyxml2::XMLElement::ParseDeep(char*, tinyxml2::StrPair*) [76] tinyxml2::XMLNode::FirstChildElement(char const*) const
+  [10] Pro_Send_Interface(ProSendParameter*) [70] tinyxml2::XMLElement::ToElement() [80] tinyxml2::XMLNode::ToElement() const
+  [81] XY_Debug_Easy_Send(char*, int) [71] tinyxml2::XMLElement::~XMLElement() [78] std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >::operator=(std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > const&)
+  [39] aes256_encrypt_ecb(tagAES256Context*, unsigned char*) [85] tinyxml2::XMLDocument::Parse() [21] parse_file (inifile.c)
+ [115] clear_refresh_flag()   [59] tinyxml2::XMLDocument::Identify(char*, tinyxml2::XMLNode**) [22] read_profile_float
+ [116] uart_common_config(int, int, char, char, char) [86] tinyxml2::XMLDocument::LoadFile(_IO_FILE*) [23] read_profile_string
+  [79] DJI_Pro_Status_Ctrl(unsigned char, void (*)(unsigned short)) [87] tinyxml2::XMLDocument::LoadFile(char const*) [20] <cycle 1>
+ [117] Get_ACK_Session_Tab()  [88] tinyxml2::XMLDocument::XMLDocument(bool, tinyxml2::Whitespace)

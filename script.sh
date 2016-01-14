@@ -1,0 +1,24 @@
+#!/bin/bash
+
+var=`ps -aux | grep -v grep | grep xunyi-controlled-exe`
+
+if [ -n "$var" ];then
+
+    echo "Controlled is running" >> /tmp/a.out
+
+else
+    echo "Here is Xunyi_Controlled_exe_test"
+    echo "Here is Xunyi_Controlled_exe_test"
+    echo "Here is Xunyi_Controlled_exe_test"
+
+    xunyipwd=/home/ubuntu/Work/New-code/Developing/Linux-Cmdline/output
+
+    oldpwd=`pwd`
+
+    cd $xunyipwd
+
+    ./xunyi-controlled-exe 10 &
+
+    cd $oldpwd
+fi
+
