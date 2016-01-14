@@ -75,7 +75,7 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 			XY_Cal_Attitude_Ctrl_Data_Up_To_Height_WithVel(	cur_vel,
 																cur_pos,
 																focus_point,
-																1, GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2, &user_ctrl_data, &flag);
+																UP_TO_HEIGHT_WITH_VEL_AT_END, GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == MODE_2_UP_TO_U3)
 		{
@@ -108,7 +108,7 @@ static void *XY_Aircraft_UpDown_Thread_Func(void * arg)
 			XY_Cal_Attitude_Ctrl_Data_Down_To_Height_WithVel_IMAGE(	cur_vel,
 																cur_pos,
 																focus_point,
-																(-0.5), GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2, &user_ctrl_data, &flag);
+																DOWN_TO_HEIGHT_WITH_VEL_AT_END, GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2, &user_ctrl_data, &flag);
 		}
 		else if( (int)(*(int *)arg) == MODE_5_DOWN_TO_D1 )
 		{

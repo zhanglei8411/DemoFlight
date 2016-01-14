@@ -1,22 +1,6 @@
 #include "control_law.h"
 #include "range.h"
 
-#define DT 						(0.02)
-#define HOVER_POINT_RANGE 		(0.1)
-#define HOVER_VELOCITY_MIN 		(0.1)
-#define TRANS_TO_HOVER_DIS 		(13.0) 
-#define DIS_DIFF_WITH_MARK		(0.20)
-#define MIN_VEL_TO_GET_IMAGE	(0.3)
-#define MIN_ANGLE_TO_GET_IMAGE  (0.1)
-
-
-
-
-#define UPDOWN_CTRL_KP			(0.2)
-#define HEIGHT_CTRL_DELTA		(0.5)
-#define P2P_MAX_ATTITUDE		(10.0)
-#define MAX_CTRL_VEL_UPDOWN_WITH_IMAGE	(0.5)
-#define PI						(3.1415926)
 
 extern struct debug_info debug_package;
 extern pthread_mutex_t debug_mutex;
@@ -89,7 +73,7 @@ int XY_Cal_Attitude_Ctrl_Data_Down_To_Height_WithVel_IMAGE(	api_vel_data_t cvel,
 	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
 	
 	//¶¨µã¿ØÖÆ£¬µ«²»×ö¸ß¶È¿ØÖÆ
-	XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(cvel, cpos, puser_ctrl_data); //´Ë´¦epos.heightÉèÖÃµÄ¸ß¶ÈÖµÃ»ÓÐÒâÒå£¬²»×ö¸ß¶È¿ØÖÆ
+	XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(cvel, cpos, puser_ctrl_data); //´Ë´¦epos.heightÉèÖÃµÄ¸ß¶ÈÖµÃ»ÓÐÒâÒå£¬²»×ö¸ß¶È¿ØÖÆ
 
 	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //¿ØÖÆµÄÊÇ´¹Ö±ËÙ¶È
 
@@ -99,22 +83,20 @@ int XY_Cal_Attitude_Ctrl_Data_Down_To_Height_WithVel_IMAGE(	api_vel_data_t cvel,
 //		printf("%.f, %.f",puser_ctrl_data->thr_z, target_vel);
 	}
 
-#if 1
 	//addÏÞ·ù´úÂë
-	if(puser_ctrl_data->thr_z > 1.0)		//modified from 2 to 1 by zhanglei 0111
+	if(puser_ctrl_data->thr_z > DOWN_LIMIT_VEL_WITH_IMAGE)		//modified from 2 to 1 by zhanglei 0111
 	{
-		puser_ctrl_data->thr_z = 1.0;
+		puser_ctrl_data->thr_z = DOWN_LIMIT_VEL_WITH_IMAGE;
 	}
-	else if(puser_ctrl_data->thr_z < (-1.0) )
+	else if(puser_ctrl_data->thr_z < (-1.0)*DOWN_LIMIT_VEL_WITH_IMAGE )
 	{
-		puser_ctrl_data->thr_z = -1.0;
+		puser_ctrl_data->thr_z = (-1.0)*DOWN_LIMIT_VEL_WITH_IMAGE;
 	}
 	
-#endif	
 	//addÊ¹ÓÃ³¬Éù²¨´úÂë
 	
 
-	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
+	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA_FOR_LOW)//modified the para, add fabs, by zhanglei 1225
 	{
 		*flag = 1;
 	}
@@ -135,37 +117,56 @@ int XY_Cal_Attitude_Ctrl_Data_Up_To_Height_WithVel(	api_vel_data_t cvel,
 {
 	
 	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
+
 	
 	//in up mode, use the Fix point control without IMAGE info, FP not control the height, the height ctrl is done in this func
 	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, _focus_point, _focus_point, -1, puser_ctrl_data); //not ctrl height
 
-	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height);   //¿ØÖÆµÄÊÇ´¹Ö±ËÙ¶È
 
-	if(fabs(puser_ctrl_data->thr_z) < fabs(target_vel))  //±£³ÖÄ©¶ËµÄËÙ¶È£¬add 0111 by zhanglei
+
+	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height); 
+
+	if(fabs(puser_ctrl_data->thr_z) < fabs(target_vel)) 
 	{
 		puser_ctrl_data->thr_z = target_vel;
-//		printf("%.f, %.f",puser_ctrl_data->thr_z, target_vel);
 	}
 
-#if 1
-	//addÏÞ·ù´úÂë
-	if(puser_ctrl_data->thr_z > 1.0)		//modified from 2 to 1 by zhanglei 0111
+	if(t_height > HEIGHT_HIGH_ABOVE)
 	{
-		puser_ctrl_data->thr_z = 1.0;
-	}
-	else if(puser_ctrl_data->thr_z < (-1.0) )
-	{
-		puser_ctrl_data->thr_z = -1.0;
-	}
-	
-#endif	
-	//addÊ¹ÓÃ³¬Éù²¨´úÂë
-	
+		
+		if(puser_ctrl_data->thr_z > UPDOWN_LIMIT_VEL_HIGH)
+		{
+			puser_ctrl_data->thr_z = UPDOWN_LIMIT_VEL_HIGH;
+		}
+		else if(puser_ctrl_data->thr_z < (-1.0)*UPDOWN_LIMIT_VEL_HIGH )
+		{
+			puser_ctrl_data->thr_z = (-1.0)*UPDOWN_LIMIT_VEL_HIGH;
+		}
 
-	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
-	{
-		*flag = 1;
+		//check out
+		if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA_FOR_HIGH)//
+		{
+			*flag = 1;
+		}
 	}
+	else
+	{
+		if(puser_ctrl_data->thr_z > UPDOWN_LIMIT_VEL_LOW)
+		{
+			puser_ctrl_data->thr_z = UPDOWN_LIMIT_VEL_LOW;
+		}
+		else if(puser_ctrl_data->thr_z < (-1.0)*UPDOWN_LIMIT_VEL_LOW )
+		{
+			puser_ctrl_data->thr_z = (-1.0)*UPDOWN_LIMIT_VEL_LOW;
+		}
+		
+		//check out
+		if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA_FOR_LOW)//
+		{
+			*flag = 1;
+		}
+	}
+
 
 	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
 	
@@ -182,26 +183,51 @@ int XY_Cal_Attitude_Ctrl_Data_UpDown_TO_Height(	api_vel_data_t cvel,
 {
 	double kp_z = UPDOWN_CTRL_KP;  //Up down cotrol factor, add by zhanglei 1225
 	
-	//¶¨µã¿ØÖÆ£¬µ«²»×ö¸ß¶È¿ØÖÆ
-	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, _focus_point, _focus_point, -1, puser_ctrl_data); //´Ë´¦epos.heightÉèÖÃµÄ¸ß¶ÈÖµÃ»ÓÐÒâÒå£¬²»×ö¸ß¶È¿ØÖÆ
+
+
+	//for the x,y control, not control the height
+	XY_Cal_Vel_Ctrl_Data_FP(cvel, cpos, _focus_point, _focus_point, -1, puser_ctrl_data);
+
+
 
 	puser_ctrl_data->thr_z = kp_z * (t_height - cpos.height); 
 
-	//addÏÞ·ù´úÂë
-	if(puser_ctrl_data->thr_z > 2.0)
+	
+	//use diff limit and check out delta at diff height
+	if(t_height > HEIGHT_HIGH_ABOVE)
 	{
-		puser_ctrl_data->thr_z = 2.0;
-	}
-	else if(puser_ctrl_data->thr_z < (-2.0) )
-	{
-		puser_ctrl_data->thr_z = -2.0;
-	}
-	//addÊ¹ÓÃ³¬Éù²¨´úÂë
+		
+		if(puser_ctrl_data->thr_z > UPDOWN_LIMIT_VEL_HIGH)
+		{
+			puser_ctrl_data->thr_z = UPDOWN_LIMIT_VEL_HIGH;
+		}
+		else if(puser_ctrl_data->thr_z < (-1.0)*UPDOWN_LIMIT_VEL_HIGH )
+		{
+			puser_ctrl_data->thr_z = (-1.0)*UPDOWN_LIMIT_VEL_HIGH;
+		}
 
-
-	if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA)//modified the para, add fabs, by zhanglei 1225
+		//check out
+		if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA_FOR_HIGH)//
+		{
+			*flag = 1;
+		}
+	}
+	else
 	{
-		*flag = 1;
+		if(puser_ctrl_data->thr_z > UPDOWN_LIMIT_VEL_LOW)
+		{
+			puser_ctrl_data->thr_z = UPDOWN_LIMIT_VEL_LOW;
+		}
+		else if(puser_ctrl_data->thr_z < (-1.0)*UPDOWN_LIMIT_VEL_LOW )
+		{
+			puser_ctrl_data->thr_z = (-1.0)*UPDOWN_LIMIT_VEL_LOW;
+		}
+		
+		//check out
+		if(fabs(t_height - cpos.height) < HEIGHT_CTRL_DELTA_FOR_LOW)//
+		{
+			*flag = 1;
+		}
 	}
 
 	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
@@ -222,23 +248,12 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 	static api_pos_data_t epos, spos;	
 	static XYZ eXYZ, cXYZ;
 	static Center_xyz exyz, cxyz;
-	api_pos_data_t g_origin_pos;
 	static int count = 0;
 	double last_distance_xyz = 0.0;
 	volatile double thetaC, phiC;
 	volatile double thetaC1, thetaC2, phiC1, phiC2;
 	char msg[100];
 	static int i = 0;
-
-	//set the origin with Longti&Lati
-	init_g_origin_pos(&g_origin_pos);
-	
-/*	//¸ú×Ùµã¿ØÖÆ²ÎÊý, last modified by zhanglei, 1222
-	k1d=0.5;
-	k1p=1;		//1222 by zhanglei µ÷ÕûÔö¼Ó10±¶£¬·ÉÐÐ²âÊÔok£¬Ö®Ç°Îª·ÂÕæokµÄ²ÎÊý0.1
-	k2d=0.5;
-	k2p=1;		//1222 by zhanglei µ÷ÕûÔö¼Ó10±¶£¬·ÉÐÐ²âÊÔok£¬Ö®Ç°Îª·ÂÕæokµÄ²ÎÊý0.1
-*/
 	
 	if(count == 0 || count == 2)
 	{
@@ -253,12 +268,6 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 		count++;
 	}
 
-	//´Ó´óµØ×ø±êÏµ×ª»»µ½ÇòÐÄ×ø±êÏµ
-	geo2XYZ(epos, &eXYZ);
-	geo2XYZ(cpos, &cXYZ);
-	//use origin as the center to transfer, the same as start
-	//XYZ2xyz(g_origin_pos, eXYZ, &exyz);
-	//XYZ2xyz(g_origin_pos, cXYZ, &cxyz);
 	XYZ2xyz(spos, eXYZ, &exyz);
 	XYZ2xyz(spos, cXYZ, &cxyz);
 
@@ -266,41 +275,33 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 	exyz.y -= DELTA_Y_M_GOOGLEEARTH;
 	exyz.z -= DELTA_Z_M_GOOGLEEARTH;
 
-	//Õ¾ÐÄ×ø±êÏµµÄ¿ØÖÆ²ÎÊýadd by zhanglei, 1225;
 	k1d=0.5;
 	k1p=1;		
 	k2d=0.5;
 	k2p=1;	
 
-	//Õ¾ÐÄ×ø±êÏµÏÂ½øÐÐ×ËÌ¬¿ØÖÆadd by zhanglei, 1225;
 	thetaC= k1p*(cxyz.x-exyz.x)+k1d*cvel.x;
 	phiC=-k2p*(cxyz.y-exyz.y)-k2d*cvel.y;
 
-	//ÏÞ·ù
+	//limit
 	if(thetaC>P2P_MAX_ATTITUDE)
 	{
 		thetaC=P2P_MAX_ATTITUDE;
 	}
-	else if(thetaC<(-1)*P2P_MAX_ATTITUDE)
+	else if(thetaC<(-1.0)*P2P_MAX_ATTITUDE)
 	{
-		thetaC=(-1)*P2P_MAX_ATTITUDE;
+		thetaC=(-1.0)*P2P_MAX_ATTITUDE;
 	}
 
 	if(phiC>P2P_MAX_ATTITUDE)
 	{
 		phiC=P2P_MAX_ATTITUDE;
 	}
-	else if(phiC<(-1)*P2P_MAX_ATTITUDE)
+	else if(phiC<(-1.0)*P2P_MAX_ATTITUDE)
 	{
-		phiC=(-1)*P2P_MAX_ATTITUDE;
+		phiC=(-1.0)*P2P_MAX_ATTITUDE;
 	}
 
-
-/*	
-	//ÔÚÇòÐÄ×ø±êÏµÏÂ¸ú×Ùµã×ËÌ¬¿ØÖÆ, add by zhanglei, 1224; simulated 1225am ok by zl.
-    thetaC = k1p*(cXYZ.z-eXYZ.z) + k1d*cvel.x;//ÆÚÍûµÄ¸©Ñö½Ç XYZÇòÐÄ×ø±êÏµ£¬ZÖáNorth+,+thetaC_pitch²úÉúSouthËÙµÝ
-	phiC = k2p*(cXYZ.x-eXYZ.x) - k2d*cvel.y;//ÆÚÍûµÄ¹ö×ª½Ç XYZÇòÐÄ×ø±êÏµ£¬XÖáWest+, +phiC_roll²úÉúEastËÙ¶È
-*/
 
 	puser_ctrl_data->ctrl_flag=0x00;//´¹Ö±ËÙ¶È£¬Ë®Æ½×ËÌ¬£¬º½Ïò½Ç¶È¿ØÖÆÄ£Ê½
 	puser_ctrl_data->roll_or_x = phiC;			//¹ö×ª½Ç.»úÌåxÖá¡£°´ÕÕÄ¿Ç° Ground×ø±êÏµ£¬²úÉúyÖáËÙ¶È
@@ -308,12 +309,9 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 	puser_ctrl_data->thr_z =  height - cpos.height;   // ¸ß¶Èµ¥Î»¸º·´À¡¿ØÖÆ£¬ºóÆÚ¿Éµ÷Õû·´À¡ÏµÊýÓÅ»¯ÐÔÄÜ -z 
 	puser_ctrl_data->yaw = 0;
 
-//	last_distance=sqrt(pow((-1)*(cXYZ.x- eXYZ.x), 2)+pow((cXYZ.z-eXYZ.z), 2));//XÖáÔÚ¶«°ëÇòÏòÎ÷ÎªÕý£¬ÔÚxÖáÔö¼Ó¸ººÅ
-
 	last_distance_xyz=sqrt(pow((cxyz.x- exyz.x), 2)+pow((cxyz.y-exyz.y), 2));
 
 #if 0
-		//printf("Dis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- exyz.x), (cxyz.y-exyz.y));//xÖáÔÚ¶«°ëÇòÏòÎ÷ÎªÕý£¬ÔÚxÖáÔö¼Ó¸ººÅ
 		printf("Dis: %lf\n", last_distance_xyz);
 		printf("End Long, Lat--> %.9lf.\t%.9lf.\t\n",epos.longti,epos.lati);
 		
@@ -329,25 +327,21 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 		//count = 0;
 	}
 
-#if 0
-	FP_With_IMAGE();	//test transfer, DELETE after test
-#endif
-
 	//XY_Debug_Sprintf(0, "\n[Height] %.8f.\n", cpos.height);
 	//XY_Debug_Sprintf(1, "[XYZ] %.8lf, %.8lf.\n", (cxyz.x- exyz.x), (cxyz.y-exyz.y));
 	
 }
 
 
-/*=====¶¨µãÐüÍ£¿ØÖÆ============*/
+/*======Focus to Point=============*/
 /*Author: zhanglei
 /*Create:2015-12-23
 /*Last Modify: 2015-12-24 by zhanglei
-/*Input: µ±Ç°ËÙ¶È£¬µ±Ç°¾­Î³¶È
-/*		Õ¾ÐÄ¾­Î³¶È£¬Ä¿±ê¾­Î³¶È
-/*		·µ»Ø¿ØÖÆÁ¿Ö¸Õë
-/*Output: ×´Ì¬
-=================================*/
+/*Input: Current vel ,pos
+/*		origin,target, target height
+/*		control 
+/*Output:control para
+/*============================*/
 int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t spos, api_pos_data_t tpos, float height, attitude_data_t *puser_ctrl_data)
 {
 	double k1d, k1p, k2d, k2p;
@@ -357,38 +351,37 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	double last_velocity=0.0;
 	static XYZ tXYZ, txyz, cXYZ, cxyz, sXYZ,sxyz;
 
-	//´Ó´óµØ×ø±êÏµ×ª»»µ½ÇòÐÄ×ø±êÏµ
+
+	//trans coordination
 	geo2XYZ(tpos, &tXYZ);
 	geo2XYZ(cpos,&cXYZ);
-
-	//´ÓÇòÐÄ×ø±êÏµ×ª»»µ½Õ¾ÐÄ×ø±êÏµ
 	XYZ2xyz(spos, cXYZ, &cxyz);
 	XYZ2xyz(spos, tXYZ, &txyz);
 
-	//txyz.x -= DELTA_X_M_GOOGLEEARTH;
-	//txyz.y -= DELTA_Y_M_GOOGLEEARTH;
-	//txyz.z -= DELTA_Z_M_GOOGLEEARTH;
+	//0114 zhanglei add for the same target
+	txyz.x -= DELTA_X_M_GOOGLEEARTH;
+	txyz.y -= DELTA_Y_M_GOOGLEEARTH;
+	txyz.z -= DELTA_Z_M_GOOGLEEARTH;
 
-	//1225ÏÂÎç·ÂÕæ½á¹û²ÎÊý£¬by zhanglei ok, 1227·ÉÐÐ²ÎÊýok
+	//0114 modify kp from 0.4 to 0.2, to reduce the ctrl attitude, not flight test
 	k1d=0.05;
-	k1p=0.4;	
+	k1p=0.2;	
 	k2d=0.05;
-	k2p=0.4;	
+	k2p=0.2;	
 
-	x_n_vel = -k1p*(cxyz.x-txyz.x)-k1d*(cvel.x);//xyzÕ¾ÐÄ×ø±êÏµ£¬xÖá±±ÏòÕý
-	y_e_vel = -k2p*(cxyz.y-txyz.y)-k2d*(cvel.y);//xyzÕ¾ÐÄ×ø±êÏµ£¬yÖá¶«ÏòÕý
+	x_n_vel = -k1p*(cxyz.x-txyz.x)-k1d*(cvel.x);
+	y_e_vel = -k2p*(cxyz.y-txyz.y)-k2d*(cvel.y);
 
-	puser_ctrl_data->ctrl_flag=0x40;//´¹Ö±ËÙ¶È£¬Ë®Æ½ËÙ¶È£¬º½Ïò½Ç¶È¿ØÖÆÄ£Ê½
-	puser_ctrl_data->roll_or_x = x_n_vel;			//x±±ÏòÆÚÍûËÙ¶È
-	puser_ctrl_data->pitch_or_y = y_e_vel;		//y¶«ÏòÆÚÍûËÙ¶È
+	puser_ctrl_data->ctrl_flag=0x40;
+	puser_ctrl_data->roll_or_x = x_n_vel;			
+	puser_ctrl_data->pitch_or_y = y_e_vel;		
 
 	if(height >= 0)
-		puser_ctrl_data->thr_z =  height - cpos.height;   // ¸ß¶Èµ¥Î»¸º·´À¡¿ØÖÆ£¬ºóÆÚ¿Éµ÷Õû·´À¡ÏµÊýÓÅ»¯ÐÔÄÜ 
+		puser_ctrl_data->thr_z =  height - cpos.height; 
 
 	last_distance_xyz=sqrt(pow((cxyz.x- txyz.x), 2)+pow((cxyz.y-txyz.y), 2));
 
 #if 0
-	//printf("HoverDis--> X:%.8lf, Y:%.8lf\n",(cxyz.x- txyz.x),(cxyz.y-txyz.y));
 	printf("last_dis: %lf\n", last_distance_xyz);
 	printf("FP  End Long, Lat--> .\t%.9lf.\t%.9lf.\t\n",tpos.longti,tpos.lati);
 
@@ -396,16 +389,11 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 
 	if(last_distance_xyz < HOVER_POINT_RANGE)
 	{
-//		printf("Ctrl--> X:%.10lf, Y:%.10lf\n",puser_ctrl_data->roll_or_x,puser_ctrl_data->pitch_or_y);
-//		puser_ctrl_data->roll_or_x = 0;			//x±±ÏòÆÚÍûËÙ¶È
-//		puser_ctrl_data->pitch_or_y = 0;		//y¶«ÏòÆÚÍûËÙ¶È		
 
 		last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
-		//printf("last vel%lf\n", last_velocity);
 
 		if(fabs(last_velocity) < HOVER_VELOCITY_MIN)
 		{
-			//XY_Cal_Vel_Ctrl_Data_Image(cpos.height);	//offset+ËÄÔªÊý+¸ß¶È(cpos.height)
 			return 1;
 		}
 	}
@@ -456,7 +444,7 @@ void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos
 	}
 	
 
-	//steady enough, ready to get image,set new target
+	//steady enough, ready to get image,set new target------!!NEED to get angle vel to limit
 	if (sqrt(cvel.x*cvel.x+cvel.y*cvel.y) < MIN_VEL_TO_GET_IMAGE && roll_angle < MIN_ANGLE_TO_GET_IMAGE && pitch_angle < MIN_ANGLE_TO_GET_IMAGE || target_update == 1)
 	{		
 
@@ -468,7 +456,10 @@ void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos
 			offset.y = offset.y/100;
 			offset.z = offset.z/100;
 
-
+			//adjust with the camera install delta dis
+			offset.x -= CAM_INSTALL_DELTA_X;
+			offset.y -= CAM_INSTALL_DELTA_Y;
+			
 			//modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
 			x_camera_diff_with_roll =cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
 			y_camera_diff_with_pitch = cpos.height * tan(pitch_rard);// modified to use the Height not use offset.z by zl, 0113
@@ -491,32 +482,30 @@ void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos
 					*flag=1;
 					count = 2;
 					return;
-				}
-					
+				}					
 			}
 
-		//trans to get the xyz coordination
-		target_origin_pos=cpos;
-		
-		//set the target with the image target with xyz
-		cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
-		cur_target_xyz.y =  offset_adjust.x; //add east offset	
-		
-		target_update=1;
-		
-		
-		//printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
-	}
-	/*
-	else		//if not steady enough, then control the vel to zero, set target to zero
-	{
-		cur_target_xyz.x=0;
-		cur_target_xyz.y=0;
-		cur_target_xyz.z=0;
-	}
-	*/
+			//trans to get the xyz coordination
+			target_origin_pos=cpos;
+			
+			//set the target with the image target with xyz
+			cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
+			cur_target_xyz.y =  offset_adjust.x; //add east offset	
 
-		//hover para the same as the FP
+			//add limit to current target, the step is 3m
+			if (sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2)) > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+			{
+				cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+				cur_target_xyz.y = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+			}
+			
+			target_update=1;
+		
+		
+			printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+		}
+
+		//hover to FP, but lower kp to the FP without image
 		k1d=0.05;
 		k1p=0.05;	//0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1
 		k2d=0.05;
@@ -530,15 +519,12 @@ void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos
 		x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(cvel.x);
 		y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(cvel.y);
 		
-		//x_n_vel = -k1p*(-1)*(offset_adjust.y)-k1d*(cvel.x);  	//camera y is to the south when DJI head focus north
-		//y_e_vel = -k2p*(offset_adjust.x)-k2d*(cvel.y);	//camera x is to the east when DJI head focus north
-
-		puser_ctrl_data->ctrl_flag=0x40;//´¹Ö±ËÙ¶È£¬Ë®Æ½ËÙ¶È£¬º½Ïò½Ç¶È¿ØÖÆÄ£Ê½
-		puser_ctrl_data->roll_or_x = x_n_vel;			//x±±ÏòÆÚÍûËÙ¶È
-		puser_ctrl_data->pitch_or_y = y_e_vel;		//y¶«ÏòÆÚÍûËÙ¶È
+		puser_ctrl_data->ctrl_flag=0x40;
+		puser_ctrl_data->roll_or_x = x_n_vel;			
+		puser_ctrl_data->pitch_or_y = y_e_vel;		
 
 		if(height >= 0)
-			puser_ctrl_data->thr_z =  height - cpos.height;   // ¸ß¶Èµ¥Î»¸º·´À¡¿ØÖÆ£¬ºóÆÚ¿Éµ÷Õû·´À¡ÏµÊýÓÅ»¯ÐÔÄÜ 
+			puser_ctrl_data->thr_z =  height - cpos.height;  
 
 		last_dis_to_mark=sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
 		//last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
@@ -554,29 +540,13 @@ void XY_Cal_Vel_Ctrl_Data_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos
 		if(height >= 0)
 			puser_ctrl_data->thr_z =  height - cpos.height;
 	}
-/*
-		if (last_dis_to_mark < DIS_DIFF_WITH_MARK)
-		{
-
-			last_velocity=sqrt(cvel.x*cvel.x+cvel.y*cvel.y);
-			
-			if(last_velocity < HOVER_VELOCITY_MIN)
-			{
-				//update_cur_legn_data(cpos.longti, cpos.lati);
-				*flag=1;
-			}
-			
-		}
-*/
-
-	
 
 }
 
 /* define in route.cpp */
 extern int drone_goback;
 
-void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos, attitude_data_t *puser_ctrl_data)
+void XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(api_vel_data_t cvel, api_pos_data_t cpos, attitude_data_t *puser_ctrl_data)
 {
 
 	double k1d, k1p, k2d, k2p;
@@ -616,7 +586,7 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_
 		count++;
 	}
 
-	//steady enough, ready to get image,set new target
+	//steady enough, ready to get image,set new target------!!NEED to get angle vel to limit
 	if (sqrt(cvel.x*cvel.x+cvel.y*cvel.y) < MIN_VEL_TO_GET_IMAGE && roll_angle < MIN_ANGLE_TO_GET_IMAGE && pitch_angle < MIN_ANGLE_TO_GET_IMAGE || target_update == 1)
 	{		
 
@@ -627,7 +597,10 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_
 			offset.x = offset.x/100;
 			offset.y = offset.y/100;
 			offset.z = offset.z/100;
-
+			
+			//adjust with the camera install delta dis
+			offset.x -= CAM_INSTALL_DELTA_X;
+			offset.y -= CAM_INSTALL_DELTA_Y;
 
 			//modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
 			x_camera_diff_with_roll =cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
@@ -651,28 +624,29 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_
 					
 			}
 
-		//trans to get the xyz coordination
-		target_origin_pos=cpos;
-		
-		//set the target with the image target with xyz
-		cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
-		cur_target_xyz.y =  offset_adjust.x; //add east offset	
-		
-		target_update=1;
-		
-		
-		printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
-		}
-	/*
-	else		//if not steady enough, then control the vel to zero, set target to zero
-	{
-		cur_target_xyz.x=0;
-		cur_target_xyz.y=0;
-		cur_target_xyz.z=0;
-	}
-	*/
+			//trans to get the xyz coordination
+			target_origin_pos=cpos;
+			
+			//set the target with the image target with xyz
+			cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
+			cur_target_xyz.y =  offset_adjust.x; //add east offset	
 
-		//hover para the same as the FP
+			
+			//add limit to current target, the step is 3m
+			if (sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2)) > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+			{
+				cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+				cur_target_xyz.y = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+			}
+			
+			target_update=1;
+			
+			
+			printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+		}
+
+		
+		//hover to FP, but lower kp to the FP without image
 		k1d=0.05;
 		k1p=0.05;	//simulation test 0113;adjust to 0.05,flight test ok 0114
 		k2d=0.05;
@@ -690,25 +664,19 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_With_IMAGE(api_vel_data_t cvel, api_pos_data_
 		if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
 		{
 			x_n_vel=MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-		}else if (x_n_vel < (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		}else if (x_n_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
 		{
-			x_n_vel= (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			x_n_vel= (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
 		}
 
 		if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
 		{
 			y_e_vel=MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-		}else if (y_e_vel < (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+		}else if (y_e_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
 		{
-			y_e_vel= (-1) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			y_e_vel= (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
 		}
-
-		
-		//printf("Ctrl_X, Y-->.\t.\t%f.\t%f\n", x_n_vel,y_e_vel);
-
-		
-		//x_n_vel = -k1p*(-1)*(offset_adjust.y)-k1d*(cvel.x);  	//camera y is to the south when DJI head focus north
-		//y_e_vel = -k2p*(offset_adjust.x)-k2d*(cvel.y);	//camera x is to the east when DJI head focus north
+				
 
 		puser_ctrl_data->ctrl_flag=0x40;//´¹Ö±ËÙ¶È£¬Ë®Æ½ËÙ¶È£¬º½Ïò½Ç¶È¿ØÖÆÄ£Ê½
 		puser_ctrl_data->roll_or_x = x_n_vel;			//x±±ÏòÆÚÍûËÙ¶È
