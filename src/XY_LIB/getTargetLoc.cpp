@@ -129,14 +129,8 @@ void xyVision::GetTarget::setCameraParams(string configFileName)
 	this->proInfo.scale = scale;
 
 	this->cameraInfo.newSize = Size(int(imageWidth*scale), int(imageHeight*scale));
-/*
-	cout << "camera matrix " << endl;
-	cout << this->cameraInfo.cameraMatrix << endl;
-	cout << "image size" << endl;
-	cout << this->cameraInfo.imageSize.width << " " << this->cameraInfo.imageSize.height << endl;
-	cout << "new image size" << endl;
-	cout << this->cameraInfo.newSize.width << " " << this->cameraInfo.newSize.height << endl;
-*/
+
+
 }
 
 xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
@@ -393,8 +387,9 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
 	split(img2, chs);
 
 	Mat bi_lab, bi_rgb;
-	inRange(img_lab, Scalar(0, 170, 0), Scalar(255, 255, 255), bi_lab);
-	cv::threshold(chs[2], bi_rgb, 100, 255, THRESH_BINARY);
+	inRange(img_lab, Scalar(0, 160, 0), Scalar(255, 255, 255), bi_lab);
+	//inRange(img_lab, Scalar(0, 130, 0), Scalar(255, 255, 255), bi_lab);
+	cv::threshold(chs[2], bi_rgb, 50, 255, THRESH_BINARY);
 
 	bi_lab.convertTo(bi_lab, CV_32F);
 	bi_rgb.convertTo(bi_rgb, CV_32F);
@@ -446,36 +441,72 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 	{
 		return false;
 	}
-	// choose the largest one
-	int maxIdx = 0;
-	int maxAera = (int)contourArea(contours[0]);
-	for (int i = 1; i < (int)contours.size(); ++i)
+
+	// if max area is 3 times larger than the second large one,
+	//then choose the largest one, otherwise, choose the center one.
+	int n_contour = (int)contours.size();
+	std::vector<double> contours_aeras(n_contour);
+	std::vector<double> center_dis(n_contour);
+	for (int i = 0; i < n_contour; ++i)
 	{
-		int conAera_i = (int)contourArea(contours[i]);
-		if (conAera_i > maxAera)
-		{
-			maxAera = conAera_i;
-			maxIdx = i;
-		}
+		contours_aeras[i] = contourArea(contours[i]);
+		Rect rect = boundingRect(contours[i]);
+		center_dis[i] = std::abs(rect.x - (double)sz.width / 2.0) + std::abs(rect.y - (double)sz.height/2.0);
 	}
-	if (maxAera < (sz.width/80.0f*sz.height/80.0f))
+	std::vector<double> sorted_area = contours_aeras;
+	std::sort(sorted_area.begin(), sorted_area.end());
+	int choosen_idx = 0;
+	if ((int)contours.size() > 1 && sorted_area[n_contour - 1] / sorted_area[n_contour - 2] > 3 )
+	{
+		// choose the largest one
+		int maxIdx = 0;
+		double maxAera = contours_aeras[0];
+		for (int i = 1; i < (int)contours.size(); ++i)
+		{
+			double conAera_i = contours_aeras[i];
+			if (conAera_i > maxAera)
+			{
+				maxAera = conAera_i;
+				maxIdx = i;
+			}
+		}
+		choosen_idx = maxIdx;
+	}
+	else
+	{
+		int nearCenIdx = 0;
+		double nearCenterDis = center_dis[0];
+		for (int i = 1; i < (int)contours.size(); ++i)
+		{
+			double cenDis_i = center_dis[i];
+			if (cenDis_i < nearCenterDis)
+			{
+				nearCenterDis = cenDis_i;
+				nearCenIdx = i;
+			}
+		}
+		choosen_idx = nearCenIdx;
+	}
+	double choosen_aera = contours_aeras[choosen_idx];
+
+	if (choosen_aera < (sz.width/80.0f*sz.height/80.0f))
 		return false;
 	if (this->frameCounterTarget > 0 &&
-		((double)maxAera / (double)this->lastArea < 3.0/10 ))
+		((double)choosen_aera / (double)this->lastArea < 3.0/10 ))
 	{
 		return false;
 	}
 	// set zeros for other contours
 	for (int i = 0; i < (int)contours.size(); ++i)
 	{
-		if (i != maxIdx)
+		if (i != choosen_idx)
 		{
 			drawContours(bi, contours, i, cv::Scalar(0), CV_FILLED, 8);
 			//drawContours(img_t, contours, i, cv::Scalar(0), CV_FILLED, 8);
 		}
 	}
-	tarContour = contours[maxIdx];
-	this->lastArea = maxAera;
+	tarContour = contours[choosen_idx];
+	this->lastArea = choosen_aera;
 	return true;
 }
 void xyVision::GetTarget::locating(vector<Point> & tarContour)

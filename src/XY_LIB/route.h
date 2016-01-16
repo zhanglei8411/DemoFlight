@@ -19,8 +19,8 @@
 
 #define TAKEOFF_HEIGHT_H_U1						(1.0)	//m
 #define GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2			(10.0)	//m
-#define GO_UP_TO_CRUICE_HEIGHT_H_U3				(40.0)	//m, ºãÉúÐ¡·¿×ÓµÄ°²È«¸ß¶È
-#define GO_DOWN_TO_HEIGHT_H_D3					(15.0)	//m
+#define GO_UP_TO_CRUICE_HEIGHT_H_U3				(35.0)	//m, ºãÉúÐ¡·¿×ÓµÄ°²È«¸ß¶È
+#define GO_DOWN_TO_HEIGHT_H_D3					(25.0)	//m
 #define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
 #define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
 
@@ -46,8 +46,15 @@
 #define ORIGIN_IN_HENGSHENG_LATI				(0.528485654) //Google EarthÌØÕ÷µã×ø±ê²ÎÊý,»¡¶È.9
 #define ORIGIN_IN_HENGSHENG_ALTI				(0.0)
 
-#define DELTA_X_M_GOOGLEEARTH					(9.845843)   //m base the data in test on 0113-2
-#define DELTA_Y_M_GOOGLEEARTH					(2.252013)   //m	
+/*
+#define DELTA_X_M_GOOGLEEARTH					(3.611858)   //m base the data in test on 0113-2
+#define DELTA_Y_M_GOOGLEEARTH					(0.243988)   //m	
+#define DELTA_Z_M_GOOGLEEARTH					(-110.209)   //m	
+*/
+
+/* 1-15 test */
+#define DELTA_X_M_GOOGLEEARTH					(-6.302767)   //m base the data in test on 0113-2
+#define DELTA_Y_M_GOOGLEEARTH					(-0.504967)   //m	
 #define DELTA_Z_M_GOOGLEEARTH					(-110.209)   //m	
 
 

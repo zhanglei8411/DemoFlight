@@ -235,7 +235,10 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Up to 10 meters\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- Up to 10 meters -----------------\n");
+		XY_Debug_Sprintf(1, "Up to 10 meters\n");
+		
 		/* 2.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -253,7 +256,10 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Up to 40 meters\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- Up to 40 meters -----------------\n");
+		XY_Debug_Sprintf(1, "Up to 40 meters\n");
+		
 		/* 3.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -271,7 +277,9 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "p2p start\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- p2p start -----------------\n");
+		XY_Debug_Sprintf(1, "p2p start\n");
 		/* 4.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -291,7 +299,9 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Down to 15 meters\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- Down to 15 meters -----------------\n");
+		XY_Debug_Sprintf(1, "Down to 15 meters\n");
 		/* 5.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -311,7 +321,9 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Start to identifies image\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- Start to identifies image -----------------\n");
+		XY_Debug_Sprintf(1, "Start to identifies image\n");
 		/* 6.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -329,7 +341,9 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Down to 1 meters\n");
+		/* tip in runlog and send to wireless terminal */
+		printf("----------------- Down to 1 meters -----------------\n");
+		XY_Debug_Sprintf(1, "Down to 1 meters\n");
 		/* 7.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -347,7 +361,9 @@ static void *Route_Task_Thread_Func(void * arg)
 		{
 			goto error;
 		}
-		//XY_Debug_Sprintf(1, "Down to 0.25 meters\n");
+		/* tip in runlog and send to wireless terminal */
+		printf( "----------------- Down to 0.25 meters -----------------\n");
+		XY_Debug_Sprintf(1, "Down to 0.25 meters\n");
 		/* 8.2 wait */
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
@@ -378,11 +394,10 @@ static void *Route_Task_Thread_Func(void * arg)
 		}
 		else
 		{
+			drone_goback = 1;
 			goto exit;
 		}
 	}
-
-	drone_goback = 1;
 
 error:
 	//回收资源
@@ -485,7 +500,7 @@ int temporary_init_route_list(void)
 		//设置终点位置, not finish
 		
 		//set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
-		set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);
+		set_leg_end_pos(&task_info, XYI_TERRACE_LONGTI, XYI_TERRACE_LATI, XYI_TERRACE_ALTI);
 
 
 		go_back = 1;

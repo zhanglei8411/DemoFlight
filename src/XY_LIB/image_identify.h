@@ -8,6 +8,10 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -32,7 +36,8 @@ typedef struct
 	int 	gotten;
 }Offset_Data;
 
-
+int mk_image_store_dir(void);
+int get_current_cnt_in_profile(void);
 int XY_Get_Offset_Data(Offset *_data, int _get_id);
 int XY_Start_Capture(void);
 int XY_Stop_Capture(void);

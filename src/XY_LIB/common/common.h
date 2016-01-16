@@ -1,7 +1,6 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-
 typedef struct{
 	double _longti;
 	double _lati;
@@ -31,7 +30,6 @@ typedef struct
 	volatile int take_off;
 	
 }Aircraft_Status;
-
 
 
 

@@ -109,7 +109,8 @@ int main(int argc,char **argv)
 	int wait_time = 0;
 
 	printf("\nXunyi Drone Test,Ver 1.1.0\n\n");
-	
+	//mk_image_store_dir();
+	//return 0;
 	setup_main_process_scheduler(SCHED_RR, 99);		//如无另行设置，后面创建的线程将继承这里的属性(调度策略+优先级)
 	//process_binding_cpu(GENERAL_JOB_CPU);							
 	
@@ -124,7 +125,7 @@ int main(int argc,char **argv)
 	printf("Debug Function Open SUCCESS...\n");
 	XY_Debug_Send_At_Once("Debug Function Open SUCCESS.\n");
 
-#if 1
+#if 0
 	if(XY_Http_Chat_Setup() < 0)
 	{
 		printf("Http Chat Function Open ERROR...\n");

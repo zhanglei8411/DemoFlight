@@ -245,6 +245,8 @@ static void *reported_data_thread_func(void * arg)
 {
 	int _flag = 0;
 	int i = 0;
+	int ret = 0;
+	int err_cnt[3] = {0};
 	
 
 	while(1)
@@ -264,16 +266,30 @@ static void *reported_data_thread_func(void * arg)
 					switch(i)
 					{
 						case 0:
-							send_http_post_data(post_package.msg_0);
+							ret = send_http_post_data(post_package.msg_0);
 							break;
 						case 1:
-							send_http_post_data(post_package.msg_1);
+							ret = send_http_post_data(post_package.msg_1);
 							break;
 						case 2:
-							send_http_post_data(post_package.msg_2);
+							ret = send_http_post_data(post_package.msg_2);
 							break;
 					}
-					XY_Empty_Post_Flag(i);
+					if(ret == 0)
+					{
+						err_cnt[i] = 0;
+						XY_Empty_Post_Flag(i);
+					}
+					else
+					{
+						err_cnt[i]++;
+						if(err_cnt[i] > 2)
+						{
+							printf("Send bad\n");
+							err_cnt[i] = 0;
+							XY_Empty_Post_Flag(i);
+						}
+					}
 				}
 				_flag = _flag >> 1;	
 				i++;

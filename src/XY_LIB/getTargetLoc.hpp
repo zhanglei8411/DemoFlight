@@ -78,7 +78,7 @@ public:
 
 	cv::Mat rectified;
 
-	int lastArea;
+	double lastArea;
 
 	vector<int> mapping;
 private:

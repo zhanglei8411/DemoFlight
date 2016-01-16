@@ -19,30 +19,18 @@ int log_on_flag = 0;
 int log_fd = -1;
 char log_name[50];
 
+
 int init_log(int *fd)
 {
-	struct timeval    tv;  
-    struct tm         *tmlocal; 
-
 	if(sem_init(&log_start_sem, 0, 0) != 0)
 		goto error;
 
 	if(sem_init(&log_ctrl_data_sem, 0, 0) != 0)
 		goto error;
 	
-	if( gettimeofday(&tv, NULL) != 0)
-	{
-		printf("ERROR init log when get time.\n");
-		goto error;
-	}
-	tmlocal = localtime(&tv.tv_sec); 
-	sprintf(log_name, "/mnt/sdcard/log/%d_%d_%d_%d_%d_%d.config", 	1900 + tmlocal->tm_year, 
-																	1 + tmlocal->tm_mon,
-																	tmlocal->tm_mday,
-																	tmlocal->tm_hour,
-																	tmlocal->tm_min,
-																	tmlocal->tm_sec); 
-	
+	sprintf(log_name, "/mnt/sdcard/log/sd-log-%d", get_current_cnt_in_profile() );
+	printf("%s\n", log_name);
+
 	*fd = open(log_name, O_RDWR | O_CREAT | O_APPEND, 0644);
 	if(*fd == -1)
 	{
@@ -97,7 +85,7 @@ void store_depend_stat(int _stat, char *strp)
 	switch(_stat)
 	{
 		case 0x01:
-			sprintf(strp, "[body_angle- roll_deg: %.4f,pitch_deg : %.4f, yaw_deg %.4f];[cur_acc- agx: %.4f, agy: %.4f, agz%.4f];[cur_vo- vgx: %.4f, vgy: %.4f, vgz%.4f];[cur_w- wx: %.4f, wy: %.4f, wz%.4f];[cur_mag- mx: %.4f, m: %.4f, m%.4f];",      
+			sprintf(strp, "[body_angle- roll_deg: %.4f,pitch_deg : %.4f, yaw_deg %.4f];[cur_acc- agx: %.4f, agy: %.4f, agz%.4f];[cur_vo- vgx: %.4f, vgy: %.4f, vgz%.4f];[cur_w- wx: %.4f, wy: %.4f, wz%.4f];[cur_mag- mx: %d, my: %d, mz: %d];",      
                                                                                                                body_angle.roll_deg, body_angle.pitch_deg, body_angle.yaw_deg,
                                                                                                                cur_acc.x, cur_acc.y, cur_acc.z,
                                                                                                                cur_vo.x, cur_vo.y, cur_vo.z,

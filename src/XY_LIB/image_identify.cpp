@@ -140,8 +140,50 @@ int XY_Stop_Capture(void)
 
 stringstream stream;
 string dirname = "/mnt/sdcard/image/";
+char second_level_dirname[10] = {0};
 string total_filename;
 float cur_height;
+
+int get_current_cnt_in_profile(void)
+{
+	char cnt[3] = {0};
+	int ret, fd;
+	
+	fd = open("/home/ubuntu/Work/Test/test-cnt-log", O_RDONLY);
+	if(fd == -1)
+	{
+		printf("test-cnt-log open error.\n");
+	}
+	memset(cnt, 0, 3);
+	ret = read(fd, cnt, 3);
+	
+	return atoi(cnt);
+}
+
+#if 1
+int mk_image_store_dir(void)
+{
+	int status = 0;
+	int cur_cnt =0;
+	char mkdirname[50] = {0};
+	
+	cur_cnt = get_current_cnt_in_profile();
+	sprintf(mkdirname, "%simage-%d", "/mnt/sdcard/image/", cur_cnt);
+	sprintf(second_level_dirname, "image-%d/", cur_cnt);
+	
+	status = mkdir(mkdirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	if( status < 0 )
+	{
+		return -1;
+	}
+	//printf("mkdirname: %s\n", mkdirname);
+	printf("second_level_dirname: %s\n", second_level_dirname);
+
+	return 0;
+}
+#endif
+
 int save_image_into_sdcard(Mat _image)
 {
 	struct timeval	  tv;  
@@ -159,10 +201,10 @@ int save_image_into_sdcard(Mat _image)
 	sprintf(name_head, "%d_%d_%ld", tmlocal->tm_min,
 									tmlocal->tm_sec,
 									tv.tv_usec); 
-	
+
 	stream.str("");
 	stream << cur_height;
-	total_filename = dirname + name_head + "H" + stream.str() + ".jpg";
+	total_filename = dirname + second_level_dirname + name_head + "H" + stream.str() + ".jpg";
 	cout << total_filename << endl;
 	const char *p = total_filename.c_str();
 	imwrite(p, _image);
@@ -268,6 +310,13 @@ int ctreate_capture_and_identify_thread(void)
 		printf("semaphore initialization failed.\n");
 		return -1;
 	}
+#if 1
+	if( mk_image_store_dir() < 0)
+	{
+		printf("Create Image Dir Error.\n");
+		return -1;
+	}
+#endif
 
 	if(XY_Create_Thread(capture_thread_func, NULL, THREADS_CAPTURE, -1, SCHED_RR, 92) < 0)
 	{
