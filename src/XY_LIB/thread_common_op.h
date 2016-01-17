@@ -25,6 +25,8 @@ typedef struct{
 #define THREADS_WAIT_ORDER	8
 #define THREADS_HTTP_POST	9
 #define THREADS_LOG			10
+#define THREADS_DELIVER		11
+#define THREADS_GOBACK		12
 
 
 

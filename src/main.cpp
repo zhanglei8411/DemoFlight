@@ -280,29 +280,7 @@ int main(int argc,char **argv)
 	}
 	XY_Start_Store_Log();
 	
-	int call_cnt = 0;
-	while(call_cnt < 2)
-	{
-		XY_Start_Route_Task_Thread(&express_thread_id);
-		pthread_join(express_thread_id, NULL);
-		call_cnt++;
-		if(call_cnt == 1)
-		{
-			if(0 == XY_Unload_Goods())
-			{
-				printf("Unload signal send okay\n");
-				XY_Debug_Send_At_Once("Unload signal send okay\n");
-			}
-			else
-			{
-				printf("Unload signal send error\n");
-				XY_Debug_Send_At_Once("Unload signal send error\n");
-			}	
-			sleep(5);
-		}
-	}	
-	printf("Task is over controller, pthread already to exit.\n");
-	XY_Debug_Send_At_Once("Task is over controller, pthread already to exit.\n");
+	XY_Drone_Execute_Task();
 	
 	XY_Stop_Store_Log();
 	
