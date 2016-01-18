@@ -159,7 +159,7 @@ static void *drone_deliver_up_thread_func(void * arg);
 static void *drone_deliver_p2p_thread_func(void * arg);
 static void *drone_deliver_down_thread_func(void * arg);
 int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);
-int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z);
+int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void);
 int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void);

@@ -390,15 +390,6 @@ int XY_Cal_Attitude_Ctrl_Data_P2P(	api_vel_data_t cvel,
 }
 
 
-/*======Focus to Point=============*/
-/*Author: zhanglei
-/*Create:2015-12-23
-/*Last Modify: 2015-12-24 by zhanglei
-/*Input: Current vel ,pos
-/*		origin,target, target height
-/*		control 
-/*Output:control para
-/*============================*/
 int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t spos, api_pos_data_t tpos, float height, attitude_data_t *puser_ctrl_data)
 {
 	double k1d, k1p, k2d, k2p;
@@ -415,12 +406,7 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	XYZ2xyz(spos, cXYZ, &cxyz);
 	XYZ2xyz(spos, tXYZ, &txyz);
 
-	//0114 zhanglei add for the same target
-	//txyz.x -= DELTA_X_M_GOOGLEEARTH;
-	//txyz.y -= DELTA_Y_M_GOOGLEEARTH;
-	//txyz.z -= DELTA_Z_M_GOOGLEEARTH;
-
-	//0114 modify kp from 0.4 to 0.2, to reduce the ctrl attitude, not flight test
+	//0114 modify kp from 0.4 to 0.2, to reduce the ctrl attitude, not flight test, up down use ok
 	k1d=0.05;
 	k1p=0.2;	
 	k2d=0.05;
@@ -458,6 +444,15 @@ int XY_Cal_Vel_Ctrl_Data_FP(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_da
 	
 }
 
+/*======Focus to Point=============*/
+/*Author: zhanglei
+/*Create:2015-12-23
+/*Last Modify: 2015-12-24 by zhanglei
+/*Input: Current vel ,pos
+/*		origin,target, target height
+/*		control 
+/*Output:control para
+/*============================*/
 int XY_Cal_Vel_Ctrl_Data_FP_JUST_P2P(api_vel_data_t cvel, api_pos_data_t cpos, api_pos_data_t spos, api_pos_data_t tpos, float height, attitude_data_t *puser_ctrl_data)
 {
 	double k1d, k1p, k2d, k2p;
@@ -484,7 +479,7 @@ int XY_Cal_Vel_Ctrl_Data_FP_JUST_P2P(api_vel_data_t cvel, api_pos_data_t cpos, a
 	printf("goback: %d\n", drone_goback);
 	
 
-	//0114 modify kp from 0.4 to 0.2, to reduce the ctrl attitude, not flight test
+	//0114 modify kp from 0.4 to 0.2, to reduce the ctrl attitude, not flight test;0116flight test ok, a little slow
 	k1d=0.05;
 	k1p=0.2;	
 	k2d=0.05;
@@ -707,6 +702,7 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(api_vel_data_t cvel, api_pos_da
 	float gps_ctrl_x,gps_ctrl_y,del_ctrl_x_gps,del_ctrl_y_gps;
 	api_common_data_t g_acc;
 	static api_vel_data_t cvel_no_gps;
+	static int integration_count;
 	
 	
 	DJI_Pro_Get_Quaternion(&cur_quaternion);
@@ -786,19 +782,20 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(api_vel_data_t cvel, api_pos_da
 				cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
 			}
 			
-			target_update=1;
+			target_update = 1;
 
 			/*--ADD NO GPS CONTROL STATE----*/
 			//judge the GPS health data
 			if (cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 0)
 			{
 				no_GPS_mode_on = 1;
+				integration_count = 1;//limit the time length of using nogps mode, add by zhanglei 0118
 				
 				cxyz_no_gps.x = 0;
 				cxyz_no_gps.y = 0;
 				
-				cvel_no_gps.x = 0;
-				cvel_no_gps.y = 0;
+				cvel_no_gps.x = cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = cvel.y;
 			}
 
 			
@@ -811,6 +808,12 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(api_vel_data_t cvel, api_pos_da
 		{
 			DJI_Pro_Get_GroundAcc(&g_acc);
 
+			//limit the time length of using nogps mode, add by zhanglei 0118
+			if(integration_count >= 100) // 2 secend reset the integration.
+			{
+				no_GPS_mode_on = 0;
+			}
+
 			//Integ x,y by velocity
 			cxyz_no_gps.x += cvel_no_gps.x * DT;
 			cxyz_no_gps.y += cvel_no_gps.y * DT;
@@ -818,6 +821,9 @@ void XY_Cal_Vel_Ctrl_Data_Get_Down_FP_With_IMAGE(api_vel_data_t cvel, api_pos_da
 			//Integ velocity by acc
 			cvel_no_gps.x += g_acc.x * DT;
 			cvel_no_gps.y += g_acc.y * DT;
+
+			integration_count++;
+			
 			printf("Ground acc: (x)%f, (y)%f\n", g_acc.x, g_acc.y);
 			
 		}

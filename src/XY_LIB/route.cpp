@@ -216,7 +216,7 @@ int drone_deliver_up_to_h2(void)
 	t_height = DELIVER_HEIGHT_OF_UPH2;					//m
 	threshold = DELIVER_THRESHOLD_OF_UP_TO_H2_OUT;		//m
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(max_vel, t_height, threshold, DELIVER_UP_TO_H2_KPZ) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, t_height, threshold, DELIVER_UP_TO_H2_KPZ) == 1)
 		return 1;
 }
 
@@ -229,7 +229,7 @@ int drone_deliver_up_to_h3(void)
 	t_height = DELIVER_HEIGHT_OF_UPH3;					//m
 	threshold = DELIVER_THRESHOLD_OF_UP_TO_H3_OUT;		//m
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(max_vel, t_height, threshold, DELIVER_UP_TO_H3_KPZ) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, t_height, threshold, DELIVER_UP_TO_H3_KPZ) == 1)
 		return 1;
 }
 
@@ -305,7 +305,7 @@ int drone_deliver_down_to_h1(void)
 	threshold = DELIVER_THRESHOLD_OF_DOWN_TO_H1_OUT;		//m
 	kp_z = DELIVER_DOWN_TO_H1_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(max_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 }
 
@@ -319,7 +319,7 @@ int drone_deliver_down_to_h2(void)
 {
 	float max_vel, t_height, threshold, kp_z;
 	
-	/* code just run one time */
+	/* code just run one time?? */
 	max_vel = DELIVER_MAX_VAL_DOWN_TO_H2;					//m/s
 	t_height = DELIVER_HEIGHT_OF_DOWNH2;					//m
 	threshold = DELIVER_THRESHOLD_OF_DOWN_TO_H2_OUT;		//m
@@ -339,7 +339,7 @@ int drone_deliver_down_to_h3(void)
 	threshold = DELIVER_THRESHOLD_OF_DOWN_TO_H3_OUT;		//m
 	kp_z = DELIVER_DOWN_TO_H3_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(max_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 }
 
@@ -519,7 +519,7 @@ int drone_goback_down_to_h3(void)
  *			    |
  *			   ---  H2, Down to H3
  *				|
- *			   ---  H3, Take off
+ *			   ---  H3, landing
  */
 static void *drone_goback_down_thread_func(void * arg)
 {
@@ -661,7 +661,7 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 	}
 }
 
-int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVal_And_FP_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z)
+int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z)
 {
 	api_vel_data_t _cvel;
 	api_pos_data_t _cpos;
@@ -955,8 +955,8 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 		printf("Unload signal send error\n");
 		XY_Debug_Sprintf(0, "Unload signal send error\n");
 	}
-		
-	while(wait_time < 400)
+	
+	while(wait_time < 400)/*Need to consider if no GPS-comment by zl0117*/	
 	{
 		wait_time++;
 			
