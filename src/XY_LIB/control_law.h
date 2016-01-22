@@ -22,6 +22,7 @@
 
 /*image para*/
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
+#define DIS_DIFF_WITH_MARK_HOVER		(1.5)	//hover to get close to the image, due to the high height, the dis is large
 #define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use
 #define MIN_ANGLE_TO_GET_IMAGE  		(2.5)	
 #define MAX_EACH_DIS_IMAGE_GET_CLOSE	(3.0)	//each time the image target dis limit

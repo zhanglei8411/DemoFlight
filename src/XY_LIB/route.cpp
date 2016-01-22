@@ -668,6 +668,7 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 	k2d = 0.05;
 	k2p = 0.2;
 
+	//For focus to point control
 	k1d_fp = 0.05;
 	k1p_fp = 0.2;	
 	k2d_fp = 0.05;
@@ -685,11 +686,11 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 
 		last_distance_xyz = sqrt(pow((cxyz.x - exyz.x), 2) + pow((cxyz.y - exyz.y), 2));
 
-		if(last_distance_xyz < (2*HOVER_POINT_RANGE) )
+		if(last_distance_xyz < (2*HOVER_POINT_RANGE) )//Get the point and exit
 		{
 			return 1;
 		}
-		else if(last_distance_xyz < TRANS_TO_HOVER_DIS)	//FP controll
+		else if(last_distance_xyz < TRANS_TO_HOVER_DIS)	//Trans to FP controll
 		{
 			x_n_vel = - k1p_fp * (cxyz.x - exyz.x) - k1d_fp * (_cvel.x);
 			y_e_vel = - k2p_fp * (cxyz.y - exyz.y) - k2d_fp * (_cvel.y);
@@ -700,6 +701,7 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 			y_e_vel = - k2p * (cxyz.y - exyz.y) - k2d * (_cvel.y);
 		}
 
+		//max velocity limit, the max velocity is P2P_MAX_VEL_N_E
 		if( ( result = sqrt( pow(x_n_vel, 2) + pow(y_e_vel, 2) ) ) > P2P_MAX_VEL_N_E)
 		{
 			x_n_vel *= (P2P_MAX_VEL_N_E/result);
@@ -715,7 +717,7 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 	
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
 		set_attitude_data(user_ctrl_data);
-		usleep(20000);
+		usleep(20000);// The control period
 	}
 }
 
@@ -782,13 +784,13 @@ int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, flo
 				user_ctrl_data.thr_z = 0 - _max_vel;
 		}
 		
-		if( fabs(_t_height - _cpos.height) < _threshold) 
+		if( fabs(_t_height - _cpos.height) < _threshold) // Trans to exit
 		{
 			return 1;
 		}
 		
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
-		usleep(20000);
+		usleep(20000);// Height control period
 	}
 }
 
@@ -819,13 +821,17 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 	
 
 	DJI_Pro_Get_Pos(&_cpos);
-	target_origin_pos = _cpos;
-	cur_target_xyz.x = 0;
+
+	//init to find the mark
+	target_origin_pos = _cpos; //get current position
+	
+	cur_target_xyz.x = 0;	//set the target is 0
 	cur_target_xyz.y = 0;
+	
 	user_ctrl_data.ctrl_flag = 0x40;
 	user_ctrl_data.yaw = 0;
 
-	assign_height = _cpos.height;
+	assign_height = _cpos.height; //set height not change
 	
 	while(1)
 	{
@@ -867,7 +873,7 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
 			
 				//check if close enough to the image target
-				if(sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2)) < 1.5)
+				if(sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK_HOVER)
 				{
 					return 1;		
 				}
@@ -915,7 +921,7 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 			//last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
 			
 			//if (last_dis_to_mark < HOVER_POINT_RANGE)
-			if(last_dis_to_mark < (1.5) )
+			if(last_dis_to_mark < (5*HOVER_POINT_RANGE) )//from 1.5 to 5*0.1=0.5, zhanglei 0123
 			{
 				arrive_flag = 1;
 				target_update=0;
@@ -992,6 +998,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		roll_angle 	= 180 / PI * roll_rard;
 		pitch_angle = 180 / PI * pitch_rard;
 
+		//steady enough to get image
 		if (sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y) < MIN_VEL_TO_GET_IMAGE
 			&& fabs(roll_angle) < MIN_ANGLE_TO_GET_IMAGE
 			&& fabs(pitch_angle) < MIN_ANGLE_TO_GET_IMAGE
@@ -1010,19 +1017,6 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
 
 				set_log_offset_adjust(offset_adjust);
-
-				//check if close enough to the image target
-				if(sqrt(pow(offset_adjust.y, 2) + pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK)
-				{
-					last_velocity = sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y);
-					
-					if(last_velocity < HOVER_VELOCITY_MIN)
-					{
-						cur_target_xyz.x = 0;
-						cur_target_xyz.y = 0;
-						cur_target_xyz.z = 0;
-					}
-				}
 				
 				//trans to get the xyz coordination
 				target_origin_pos = _cpos;
@@ -1276,6 +1270,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 				set_log_offset_adjust(offset_adjust);
 
 				//check if close enough to the image target
+				/* delete by zhanglei 0123
 				if(sqrt(pow(offset_adjust.y, 2) + pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK)
 				{
 					last_velocity = sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y);
@@ -1287,6 +1282,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 						cur_target_xyz.z = 0;
 					}
 				}
+				*/
 				
 				//trans to get the xyz coordination
 				target_origin_pos = _cpos;
@@ -1469,16 +1465,16 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 {
-	api_vel_data_t _cvel;
-	api_pos_data_t _cpos;
 	attitude_data_t user_ctrl_data;
 	double k1d_fp, k1p_fp, k2d_fp, k2p_fp;
-	XYZ f_XYZ, c_XYZ;
-	Center_xyz fxyz, cxyz;
 	double last_distance_xyz = 0.0;
 	double x_n_vel, y_e_vel;
-	api_pos_data_t _focus_point;
 	int wait_time = 0;
+	
+	Center_xyz cxyz_no_gps;
+	api_common_data_t g_acc;
+	api_vel_data_t cvel_no_gps;
+	int integration_count = 0;
 
 	DJI_Pro_Get_Pos(&_focus_point);
 	
@@ -1489,13 +1485,9 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 	user_ctrl_data.yaw = 0;
 
 	k1d_fp = 0.05;
-	k1p_fp = 0.2;	
+	k1p_fp = 0.1;	
 	k2d_fp = 0.05;
-	k2p_fp = 0.2;
-
-	geo2XYZ(_focus_point, &f_XYZ);
-	XYZ2xyz(_focus_point, f_XYZ, &fxyz);
-
+	k2p_fp = 0.1;
 
 	if(0 == XY_Unload_Goods())
 	{
@@ -1507,25 +1499,40 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 		printf("Unload signal send error\n");
 		XY_Debug_Sprintf(0, "Unload signal send error\n");
 	}
+
+	cxyz_no_gps.x = 0;
+	cxyz_no_gps.y = 0;
+	cxyz_no_gps.z = 0;
+	cvel_no_gps.x = 0;
+	cvel_no_gps.y = 0;
+	cvel_no_gps.z = 0;
+
 		
-	while(wait_time < 100)
+	while(integration_count < 50)
 	{
-		wait_time++;
 			
-		DJI_Pro_Get_Pos(&_cpos);
-		DJI_Pro_Get_GroundVo(&_cvel);
-
-		/* focus to point */
-		geo2XYZ(_cpos, &c_XYZ);
-		XYZ2xyz(_focus_point, c_XYZ, &cxyz);
-
-		x_n_vel = - k1p_fp * (cxyz.x - fxyz.x) - k1d_fp * (_cvel.x);
-		y_e_vel = - k2p_fp * (cxyz.y - fxyz.y) - k2d_fp * (_cvel.y);
+		//get the acc and integeration
+		DJI_Pro_Get_GroundAcc(&g_acc);
+		
+		//Integ x,y by velocity
+		cxyz_no_gps.x += cvel_no_gps.x * DT;
+		cxyz_no_gps.y += cvel_no_gps.y * DT;
+		cxyz_no_gps.z += cvel_no_gps.z * DT;
+		
+		//Integ velocity by acc
+		cvel_no_gps.x += g_acc.x * DT;
+		cvel_no_gps.y += g_acc.y * DT;
+		cvel_no_gps.z += g_acc.z * DT;
+		
+		x_n_vel = - k1p_fp * (cxyz_no_gps.x - 0) - k1d_fp * (cvel_no_gps.x);
+		y_e_vel = - k2p_fp * (cxyz_no_gps.y - 0) - k2d_fp * (cvel_no_gps.y);
 
 		user_ctrl_data.roll_or_x = x_n_vel;			
 		user_ctrl_data.pitch_or_y = y_e_vel;	
 
-		user_ctrl_data.thr_z = (_focus_point.height- _cpos.height); 
+		user_ctrl_data.thr_z = (0 - cxyz_no_gps.z); //height control
+
+		integration_count++;
 		
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
 		usleep(20000);
