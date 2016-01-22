@@ -8,6 +8,12 @@ typedef struct{
 	float _height;
 }position;
 
+typedef struct{
+	double x;
+	double y;
+	double z;
+}XYZ;
+
 struct Leg
 {
 	unsigned char leg_seq;
@@ -15,6 +21,10 @@ struct Leg
 	position start;
 	position end;
 	position current;
+	position origin;
+	XYZ _start;
+	XYZ _end;
+	XYZ _current;
 };
 
 typedef struct _Leg_Node

@@ -12,6 +12,7 @@
 #include <semaphore.h>
 #include <math.h>
 #include "../DJI_LIB/DJI_Pro_App.h"
+#include "image_identify.h"
 
 
 int XY_SD_Log_Setup(void);
@@ -19,6 +20,7 @@ void set_attitude_data(attitude_data_t _user_ctrl_data);
 static void *store_to_log_thread_func(void * arg);
 int XY_Start_Store_Log(void);
 int XY_Stop_Store_Log(void);
+void set_log_offset_adjust(Offset _src_offset);
 
 
 #endif

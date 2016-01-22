@@ -77,7 +77,7 @@ int XY_Debug_Sprintf(int seq, char *fmt, ...)
 
 int XY_Debug_Send_At_Once(char *fmt, ...)
 {
-	char msg_at_once[100];
+	char msg_at_once[512];
 	
 	va_list args;
 	va_start(args, fmt);

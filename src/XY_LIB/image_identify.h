@@ -42,5 +42,6 @@ int XY_Get_Offset_Data(Offset *_data, int _get_id);
 int XY_Start_Capture(void);
 int XY_Stop_Capture(void);
 int XY_Capture_Setup(void);
+void clear_sample_states(void);
 
 #endif

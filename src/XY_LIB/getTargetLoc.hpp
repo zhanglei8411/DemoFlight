@@ -63,6 +63,10 @@ public:
     */
     Point3f getCurrentLoc();
 
+	/** @brief clear current states
+	*/
+	void clearStates();
+
 	int frameCounter;
 	int frameCounterTarget;
 
@@ -79,6 +83,8 @@ public:
 	cv::Mat rectified;
 
 	double lastArea;
+
+	cv::Point3f lastLoc;
 
 	vector<int> mapping;
 private:

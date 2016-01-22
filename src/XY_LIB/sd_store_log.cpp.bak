@@ -1,5 +1,6 @@
 #include "sd_store_log.h"
 #include "thread_common_op.h"
+#include "image_identify.h"
 #include "range.h"
 #include "route.h"
 #include "control_law.h"
@@ -67,7 +68,6 @@ int XY_SD_Log_Setup(void)
 
 float _log_ultra_data;
 Offset _log_offset;
-Offset _log_offset_adjust;
 api_pos_data_t _log_pos;
 attitude_data_t _log_user_ctrl_data;
 Center_xyz  cur_xyz;
@@ -85,7 +85,7 @@ void store_depend_stat(int _stat, char *strp)
 	switch(_stat)
 	{
 		case 0x01:
-			sprintf(strp, "[body_angle- roll_deg: %.4f,pitch_deg : %.4f, yaw_deg %.4f];[cur_acc- agx: %.4f, agy: %.4f, agz: %.4f];[cur_vo- vgx: %.4f, vgy: %.4f, vgz: %.4f];[cur_w- wx: %.4f, wy: %.4f, wz: %.4f];[cur_mag- mx: %d, my: %d, mz: %d];",      
+			sprintf(strp, "[body_angle- roll_deg: %.4f,pitch_deg : %.4f, yaw_deg %.4f];[cur_acc- agx: %.4f, agy: %.4f, agz%.4f];[cur_vo- vgx: %.4f, vgy: %.4f, vgz%.4f];[cur_w- wx: %.4f, wy: %.4f, wz%.4f];[cur_mag- mx: %d, my: %d, mz: %d];",      
                                                                                                                body_angle.roll_deg, body_angle.pitch_deg, body_angle.yaw_deg,
                                                                                                                cur_acc.x, cur_acc.y, cur_acc.z,
                                                                                                                cur_vo.x, cur_vo.y, cur_vo.z,
@@ -94,10 +94,10 @@ void store_depend_stat(int _stat, char *strp)
 			break;
 		case 0x02:
 			sprintf(strp, "[pos - longti: %.10lf, lati: %.10lf, alti: %.8f, height: %.8f, health: %x];", 	_log_pos.longti,
-																											_log_pos.lati,
-																											_log_pos.alti,
-																											_log_pos.height,
-																											_log_pos.health_flag);
+																								_log_pos.lati,
+																								_log_pos.alti,
+																								_log_pos.height,
+																								_log_pos.health_flag);
 			break;
 			
 		case 0x04:
@@ -109,7 +109,7 @@ void store_depend_stat(int _stat, char *strp)
 		case 0x08:
 			break;
 		case 0x10:
-			sprintf(strp, "[ctrl data - pitch: %.f, roll: %f, yaw: %f, thr: %f];", 	_log_user_ctrl_data.pitch_or_y,
+			sprintf(strp, "[ctrl data - pitch: %.f, roll: %f, yaw: %f, thr: %f] ", 	_log_user_ctrl_data.pitch_or_y,
 																					_log_user_ctrl_data.roll_or_x,
 																					_log_user_ctrl_data.yaw,
 																					_log_user_ctrl_data.thr_z);
@@ -117,18 +117,6 @@ void store_depend_stat(int _stat, char *strp)
 			
         case 0x20:
 			sprintf(strp, "[ultra_data: %.4f];", _log_ultra_data);
-			break;
-			
-		case 0x40:
-			sprintf(strp, "[offset_x: %.4f, offset_y: %.4f, offset_z: %.4f];", 	_log_offset.x,
-																				_log_offset.y,
-																				_log_offset.z);
-			break;
-			
-		case 0x80:
-			sprintf(strp, "[adjust: offset_x: %.4f, offset_y: %.4f, offset_z: %.4f];", 	_log_offset_adjust.x,
-																						_log_offset_adjust.y,
-																						_log_offset_adjust.z);
 			break;
 			
 
@@ -249,23 +237,6 @@ int XY_Stop_Store_Log(void)
 }
 
 
-Offset offset_temp;
-pthread_mutex_t offset_adjust_lock = PTHREAD_MUTEX_INITIALIZER;
-void set_log_offset_adjust(Offset _src_offset)
-{
-	pthread_mutex_lock(&offset_adjust_lock);
-	offset_temp = _src_offset;
-	pthread_mutex_unlock(&offset_adjust_lock);
-}
-
-void get_log_offset_adjust(Offset *_offset)
-{
-	pthread_mutex_lock(&offset_adjust_lock);
-	*_offset = offset_temp;
-	pthread_mutex_unlock(&offset_adjust_lock);
-}
-	
-
 
 /* [timestamp]  */
 static void *store_to_log_thread_func(void * arg)
@@ -294,7 +265,17 @@ static void *store_to_log_thread_func(void * arg)
 	while(1)
 	{	
 		if(if_log_on() )
-		{		
+		{
+#if 0
+			/* sd code should use OFFSET_GET_ID_B */
+			Offset offset;
+			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_B) == 0)
+			{
+				/* ... */
+			}
+#endif
+			
+		
 			DJI_Pro_Get_Quaternion(&cur_quaternion);
 			QUA2ANGLE(cur_quaternion,&body_angle) ;                                                        
 			DJI_Pro_Get_GroundAcc(&cur_acc);  
@@ -317,17 +298,6 @@ static void *store_to_log_thread_func(void * arg)
 		   	{
 			   	stat |= 0x20;
 		   	}
-
-			/* sd code should use OFFSET_GET_ID_B */
-			if( XY_Get_Offset_Data(&_log_offset, OFFSET_GET_ID_B) == 0)
-			{
-				stat |= 0x40;
-
-				get_log_offset_adjust(&_log_offset_adjust);
-				stat |= 0x80;
-			}
-
-			
                               
 			if( gettimeofday(&tv, NULL) != 0)
 			{
@@ -355,10 +325,8 @@ static void *store_to_log_thread_func(void * arg)
 			check_stat_store(stat, 0x02, _wbuf);
 			check_stat_store(stat, 0x04, _wbuf);
 			check_stat_store(stat, 0x08, _wbuf);
-			check_stat_store(stat, 0x10, _wbuf);
-			check_stat_store(stat, 0x20, _wbuf);
-			check_stat_store(stat, 0x40, _wbuf);
-			check_stat_store(stat, 0x80, _wbuf);
+			check_stat_store(stat, 0x10,_wbuf);
+			check_stat_store(stat, 0x20,_wbuf);
 		  
 			add_crlf();
 			

@@ -5,6 +5,9 @@
 using namespace cv;
 using namespace std;
 
+xyVision::GetTarget sample("config.ini");
+
+
 Offset_Data offset_data;
 
 pthread_mutex_t capture_on_off_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -134,6 +137,7 @@ int XY_Stop_Capture(void)
 {
 	Offset _offset;
 	set_capture_on_flag(0);
+	clear_sample_states();
 	XY_Get_Offset_Data(&_offset, OFFSET_GET_ID_A);
 	return 0;
 }
@@ -265,16 +269,21 @@ static void *capture_thread_func(void * arg)
 }
 
 
+void clear_sample_states(void)
+{
+	sample.clearStates();
+}
+
 static void *image_identify_thread_func(void * arg)
 {
 	//thread_binding_cpu(NULL, IMAGE_JOB_CPU);
 	
-	xyVision::GetTarget sample("config.ini");
+	//xyVision::GetTarget sample("config.ini");
 	while(1)
 	{	
-		sem_wait(&image_get_sem);		//等待capture获取到图像
+		sem_wait(&image_get_sem);						//等待capture获取到图像
 #if 1
-		sample << img;			//identify
+		sample << img;									//identify
 		if(!sample.isDetected )
 			goto pre_restart;
 
@@ -314,7 +323,7 @@ int ctreate_capture_and_identify_thread(void)
 	if( mk_image_store_dir() < 0)
 	{
 		printf("Create Image Dir Error.\n");
-		return -1;
+		//return -1;
 	}
 #endif
 

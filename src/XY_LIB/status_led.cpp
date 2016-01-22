@@ -132,18 +132,13 @@ void update_led_jobs(void)
 	int i, j = 0;
 	
 	pthread_mutex_lock(&led_job_status_lock);
-	while(led_jobs[i].ing == 1)
-		i++;
-	if(i == 1 || i == 0)
-	{
-		led_jobs[0].ing = 0;
-		return;
-	}
-	
-	for(j=0; j<(i-1); j++)
+
+	for(j=0; j<(10-1); j++)
 	{
 		led_jobs[j].cmd = led_jobs[j+1].cmd;
+		led_jobs[j].ing = led_jobs[j+1].ing;
 	}
+	
 	led_jobs[j].ing = 0;
 	pthread_mutex_unlock(&led_job_status_lock);
 	
@@ -186,7 +181,7 @@ static void *led_show_status_thread_func(void * arg)
 	
 	while(1)
 	{	
-		if(show_cnt < 50)
+		if(show_cnt < 20)
 		{
 			update_show_policy(get_led_cmd());
 			turn_on_led(led_fd);

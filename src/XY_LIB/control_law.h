@@ -23,12 +23,12 @@
 /*image para*/
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
 #define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use
-#define MIN_ANGLE_TO_GET_IMAGE  		(0.1)	
+#define MIN_ANGLE_TO_GET_IMAGE  		(2.5)	
 #define MAX_EACH_DIS_IMAGE_GET_CLOSE	(3.0)	//each time the image target dis limit
 #define MAX_CTRL_VEL_UPDOWN_WITH_IMAGE	(0.35)	//change from 0.5 by zhanglei night 0114
 #define CAM_INSTALL_DELTA_X				(0.0)	//m,add to offset camera x, down to see drone, x is right 
 #define CAM_INSTALL_DELTA_Y				(0.198)	//m,add to offset camera y, down to see drone, y is down, the drone center is y+
-#define GPS_HEALTH_GOOD					(0)
+#define GPS_HEALTH_GOOD					(6)
 
 /*updown para*/
 #define UPDOWN_LIMIT_VEL_HIGH			(1.5)	//for up to height without image at high height
@@ -40,11 +40,6 @@
 #define HEIGHT_CTRL_DELTA_FOR_LOW		(0.25)	//for low height use
 
 
-typedef struct{
-	double x;
-	double y;
-	double z;
-}XYZ;
 
 typedef XYZ Center_xyz;
 

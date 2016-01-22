@@ -26,7 +26,7 @@
 #include "XY_LIB/status_led.h"
 #include "XY_LIB/http_chat_3g.h"
 #include "XY_LIB/sd_store_log.h"
-
+ 
 
 #define DEBUG_PRINTF 1
 
@@ -109,15 +109,12 @@ int main(int argc,char **argv)
 	int wait_time = 0;
 
 	printf("\nXunyi Drone Test,Ver 1.1.0\n\n");
-	//mk_image_store_dir();
-	//return 0;
+
 	setup_main_process_scheduler(SCHED_RR, 99);		//如无另行设置，后面创建的线程将继承这里的属性(调度策略+优先级)
 	//process_binding_cpu(GENERAL_JOB_CPU);							
 	
 	signal(SIGINT, handle_signal);
 
-
-	
 	if(XY_Debug_Setup() < 0)
 	{
 		printf("Debug Function Open ERROR...\n");
@@ -125,7 +122,19 @@ int main(int argc,char **argv)
 	printf("Debug Function Open SUCCESS...\n");
 	XY_Debug_Send_At_Once("Debug Function Open SUCCESS.\n");
 
+
+  	if(XY_Status_Led_Setup() < 0)
+	{
+		printf("Led Function Open ERROR...\n");
+		XY_Debug_Send_At_Once("Led Function Open ERROR.\n");
+	}
+	printf("Led Function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Led Function Open SUCCESS.\n");
+
+	ioctl_led(2);
+
 #if 0
+_relink:
 	if(XY_Http_Chat_Setup() < 0)
 	{
 		printf("Http Chat Function Open ERROR...\n");
@@ -136,23 +145,41 @@ int main(int argc,char **argv)
 	
 	pthread_join(get_tid(THREADS_WAIT_ORDER), NULL );
 
+	if( get_order_status() == 0)
+	{
+		goto _relink;
+	}
+
+	if( XY_Http_Reported_Setup() < 0)
+	{
+		printf("Http Reported Function Open ERROR...\n");
+		XY_Debug_Send_At_Once("Http Reported Function Open ERROR.\n");
+	}
+	printf("Http Reported Function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Http Reported Function Open SUCCESS.\n");
+
 #if 0
 	/* just to test */
-	XY_Send_Http_Post_Request_Data(0, "id=%d&msg_id=%d&lng=%.10lf&lati=%.10lf\r\n", 11111, 1, 2.094421665, 0.528485654);
+	//装载成功
+	XY_Send_Http_Post_Request_Data(0, "msg_id=1&order_id=%s&load=1\r\n", get_order_id_from_json() );
+	//标记定位中
+	XY_Send_Http_Post_Request_Data(1, "msg_id=3&order_id=%s&landing=1\r\n", get_order_id_from_json() );
+	//定位完成
+	XY_Send_Http_Post_Request_Data(2, "msg_id=3&order_id=%s&landing=2\r\n", get_order_id_from_json() );
+	//已送达, 准备返航
+	XY_Send_Http_Post_Request_Data(3, "msg_id=4&order_id=%s&arrived=0\r\n", get_order_id_from_json() );
+#endif
+
+#if 0
+	message_server_load_is_okay();
+	sleep(70);		
+	message_server_finding_mark();
+	sleep(30);
 #endif
 
 #endif
-
-	if(XY_Status_Led_Setup() < 0)
-	{
-		printf("Led Function Open ERROR...\n");
-		XY_Debug_Send_At_Once("Led Function Open ERROR.\n");
-	}
-	printf("Led Function Open SUCCESS...\n");
-	XY_Debug_Send_At_Once("Led Function Open SUCCESS.\n");
 	
 	ioctl_led(2);
-	//ioctl_led(3);
 	if(argc == 2)
 	{
 		wait_time = atoi(argv[1]);
@@ -227,6 +254,7 @@ int main(int argc,char **argv)
 	{
 		printf("Load signal send okay.\n");
 		XY_Debug_Send_At_Once("Load signal send okay.\n");
+		message_server_load_is_okay();
 	}
 	else
 	{
@@ -272,6 +300,8 @@ int main(int argc,char **argv)
 	}	
 	printf("Obtained controller, start to flight.\n");
 	XY_Debug_Send_At_Once("Obtained controller, start to flight.\n");
+
+	enable_report_drone_pos();
 
 	if(XY_SD_Log_Setup() < 0)
 	{

@@ -560,7 +560,6 @@ int DJI_Pro_Control_Management(unsigned char cmd,Command_Result_Notify user_noti
 /*
  *  interface: attitude control interface
  */
-
 int DJI_Pro_Attitude_Control(attitude_data_t *p_user_data)
 {
     DJI_Pro_App_Send_Data(0,1, MY_CTRL_CMD_SET, API_CTRL_REQUEST,

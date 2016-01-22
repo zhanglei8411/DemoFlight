@@ -18,26 +18,47 @@
 #include "control_steer.h"
 
 
-#define DELIVER_MAX_VAL_UP_TO_H2								(0.75)	//m/s
-#define DELIVER_MAX_VAL_UP_TO_H3								(1.5)
-#define DELIVER_MAX_VAL_DOWN_TO_H1								(1.5)
-#define DELIVER_MAX_VAL_DOWN_TO_H2								(0.35)
-#define DELIVER_MAX_VAL_DOWN_TO_H3								(0.25)
+#define DELIVER_MAX_VEL_UP_TO_H2								(0.75)	//m/s
+#define DELIVER_MAX_VEL_UP_TO_H3								(1.5)
+#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.5)
+#define DELIVER_MAX_VEL_DOWN_TO_H2								(0.35)
+#define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)
+
+#define GOBACK_MAX_VEL_UP_TO_H2									DELIVER_MAX_VEL_UP_TO_H2
+#define GOBACK_MAX_VEL_UP_TO_H3									DELIVER_MAX_VEL_UP_TO_H3
+#define GOBACK_MAX_VEL_DOWN_TO_H1								DELIVER_MAX_VEL_DOWN_TO_H1
+#define GOBACK_MAX_VEL_DOWN_TO_H2								DELIVER_MAX_VEL_DOWN_TO_H2
+#define GOBACK_MAX_VEL_DOWN_TO_H3								DELIVER_MAX_VEL_DOWN_TO_H3
+
+#define DELIVER_MIN_VEL_UP_TO_H2								(0.2)	//m/s
+#define DELIVER_MIN_VEL_UP_TO_H3								(0.4)
+#define DELIVER_MIN_VEL_DOWN_TO_H1								(0.4)
+#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.2)
+#define DELIVER_MIN_VEL_DOWN_TO_H3								(0.2)
+
+#define GOBACK_MIN_VEL_UP_TO_H2									DELIVER_MIN_VEL_UP_TO_H2
+#define GOBACK_MIN_VEL_UP_TO_H3									DELIVER_MIN_VEL_UP_TO_H3
+#define GOBACK_MIN_VEL_DOWN_TO_H1								DELIVER_MIN_VEL_DOWN_TO_H1
+#define GOBACK_MIN_VEL_DOWN_TO_H2								DELIVER_MIN_VEL_DOWN_TO_H2
+#define GOBACK_MIN_VEL_DOWN_TO_H3								DELIVER_MIN_VEL_DOWN_TO_H3
 
 
+
+#define DIFF_HEIGHT_OF_MANUAL_PACK								(0.1)	
+#define DIFF_HEIGHT_OF_AUTO_PACK								(0.52)
+#define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
 
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)
-#define DELIVER_HEIGHT_OF_DOWNH1									(25.0)
-#define DELIVER_HEIGHT_OF_DOWNH2									(1.0)
-#define DELIVER_HEIGHT_OF_DOWNH3									(0.25)
+#define DELIVER_HEIGHT_OF_DOWNH1									(25.0 	- DIFF_HEIGHT_WHEN_TAKEOFF)
+#define DELIVER_HEIGHT_OF_DOWNH2									(0.8 	- DIFF_HEIGHT_WHEN_TAKEOFF)
+#define DELIVER_HEIGHT_OF_DOWNH3									(0.5 	- DIFF_HEIGHT_WHEN_TAKEOFF)
 
-#define GOBACK_HEIGHT_OF_UPH2										DELIVER_HEIGHT_OF_UPH2
-#define GOBACK_HEIGHT_OF_UPH3										DELIVER_HEIGHT_OF_UPH3
-#define GOBACK_HEIGHT_OF_DOWNH1										DELIVER_HEIGHT_OF_DOWNH1
-#define GOBACK_HEIGHT_OF_DOWNH2										DELIVER_HEIGHT_OF_DOWNH2
-#define GOBACK_HEIGHT_OF_DOWNH3										DELIVER_HEIGHT_OF_DOWNH3
-
+#define GOBACK_HEIGHT_OF_UPH2										(10.0	- DIFF_HEIGHT_WHEN_TAKEOFF)
+#define GOBACK_HEIGHT_OF_UPH3										(35.0)
+#define GOBACK_HEIGHT_OF_DOWNH1										(25.0)
+#define GOBACK_HEIGHT_OF_DOWNH2										(1.5)
+#define GOBACK_HEIGHT_OF_DOWNH3										(1)
 
 
 #define DELIVER_THRESHOLD_OF_UP_TO_H2_OUT						(1.0)		
@@ -46,6 +67,14 @@
 #define DELIVER_THRESHOLD_OF_DOWN_TO_H2_OUT						(0.25)
 #define DELIVER_THRESHOLD_OF_DOWN_TO_H3_OUT						(0.15)
 
+#define GOBACK_THRESHOLD_OF_UP_TO_H2_OUT						(1.0)
+#define GOBACK_THRESHOLD_OF_UP_TO_H3_OUT						(1.0)
+#define GOBACK_THRESHOLD_OF_DOWN_TO_H1_OUT						(1.0)
+#define GOBACK_THRESHOLD_OF_DOWN_TO_H2_OUT						(0.25)
+#define GOBACK_THRESHOLD_OF_DOWN_TO_H3_OUT						(0.15)
+
+
+
 
 
 #define DELIVER_UP_TO_H2_KPZ									(0.2)
@@ -53,7 +82,13 @@
 #define DELIVER_DOWN_TO_H1_KPZ									(0.2)
 #define DELIVER_DOWN_TO_H2_KPZ									(0.2)
 #define DELIVER_DOWN_TO_H3_KPZ									(0.2)
+	
 
+#define GOBACK_UP_TO_H2_KPZ										(0.2)
+#define GOBACK_UP_TO_H3_KPZ										(0.2)
+#define GOBACK_DOWN_TO_H1_KPZ									(0.2)
+#define GOBACK_DOWN_TO_H2_KPZ									(0.2)
+#define GOBACK_DOWN_TO_H3_KPZ									(0.2)
 
 
 
@@ -124,6 +159,13 @@ inline void set_pos(position *_pos, double _longti, double _lati, double _alti)
 	_pos->_alti = _alti;
 }
 
+inline void set_xyz(XYZ *_xyz, double _x, double _y, double _z)
+{
+	_xyz->x = _x;
+	_xyz->y = _y;
+	_xyz->z = _z;
+}
+
 inline void set_leg_start_pos(struct Leg *_pleg, double _longti, double _lati, double _alti)
 {
 	set_pos(&_pleg->start, _longti, _lati, _alti);
@@ -137,6 +179,21 @@ inline void set_leg_end_pos(struct Leg *_pleg, double _longti, double _lati, dou
 inline void set_leg_cur_pos(struct Leg *_pleg, double _longti, double _lati, double _alti)
 {
 	set_pos(&_pleg->current, _longti, _lati, _alti);
+}
+
+inline void set_leg_start_xyz(struct Leg *_pleg, double _x, double _y, double _z)
+{
+	set_xyz(&_pleg->_start, _x, _y, _z);
+}
+
+inline void set_leg_end_xyz(struct Leg *_pleg, double _x, double _y, double _z)
+{
+	set_xyz(&_pleg->_end, _x, _y, _z);
+}
+
+inline void set_leg_cur_xyz(struct Leg *_pleg, double _x, double _y, double _z)
+{
+	set_xyz(&_pleg->_current, _x, _y, _z);
 }
 
 
@@ -159,21 +216,16 @@ static void *drone_deliver_up_thread_func(void * arg);
 static void *drone_deliver_p2p_thread_func(void * arg);
 static void *drone_deliver_down_thread_func(void * arg);
 int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);
-int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z);
+int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void);
-int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _t_height, float _threshold, double _kp_z);
+int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
+int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void);
 
 static void *drone_goback_task_thread_func(void * arg);
 static void *drone_goback_up_thread_func(void * arg);
 static void *drone_goback_p2p_thread_func(void * arg);
 static void *drone_goback_down_thread_func(void * arg);
-
-
-
-
-
-
 
 
 

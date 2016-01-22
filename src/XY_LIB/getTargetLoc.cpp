@@ -62,8 +62,8 @@ xyVision::GetTarget::GetTarget(string configName)
 	KF.transitionMatrix = *(Mat_<float>(6,6) << 1,0,0,1,0,0,   0,1,0,0,1,0,  0,0,1,0,0,1,  0,0,0,1,0,0,  0,0,0,0,1,0,  0,0,0,0,0,1);
 	setIdentity(KF.measurementMatrix);
 	setIdentity(KF.processNoiseCov, Scalar::all(1e-4));
-	setIdentity(KF.measurementNoiseCov, Scalar::all(1));
-	setIdentity(KF.errorCovPost, Scalar::all(.1));
+	setIdentity(KF.measurementNoiseCov, Scalar::all(0.5));
+	setIdentity(KF.errorCovPost, Scalar::all(1e-2));
 
 	// compute mapping
 	this->mapping.resize(256);
@@ -130,7 +130,6 @@ void xyVision::GetTarget::setCameraParams(string configFileName)
 
 	this->cameraInfo.newSize = Size(int(imageWidth*scale), int(imageHeight*scale));
 
-
 }
 
 xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
@@ -164,7 +163,7 @@ xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
 		{
 			KF.predict();
 			Mat estimate = KF.correct(Mat(_point));
-			this->currentLoc = Point3f(estimate.at<float>(0), estimate.at<float>(1), estimate.at<float>(2));
+			//this->currentLoc = Point3f(estimate.at<float>(0), estimate.at<float>(1), estimate.at<float>(2));
 		}
 		this->frameCounterTarget ++;
 	}
@@ -387,7 +386,7 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
 	split(img2, chs);
 
 	Mat bi_lab, bi_rgb;
-	inRange(img_lab, Scalar(0, 160, 0), Scalar(255, 255, 255), bi_lab);
+	inRange(img_lab, Scalar(0, 155, 0), Scalar(255, 255, 255), bi_lab);
 	//inRange(img_lab, Scalar(0, 130, 0), Scalar(255, 255, 255), bi_lab);
 	cv::threshold(chs[2], bi_rgb, 50, 255, THRESH_BINARY);
 
@@ -430,7 +429,7 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 		RotatedRect box = minAreaRect(Mat(contours[i]));
 		float height = float(box.size.height);
 		float width = float(box.size.width);
-		if (height / width < 2 && width / height < 2)
+		if (height / width < 3 && width / height < 3)
 		{
 			contours_filter.push_back(contours[i]);
 		}
@@ -442,7 +441,7 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 		return false;
 	}
 
-	// if max area is 3 times larger than the second large one,
+	// if max area is 1.5 times larger than the second large one,
 	//then choose the largest one, otherwise, choose the center one.
 	int n_contour = (int)contours.size();
 	std::vector<double> contours_aeras(n_contour);
@@ -456,7 +455,7 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 	std::vector<double> sorted_area = contours_aeras;
 	std::sort(sorted_area.begin(), sorted_area.end());
 	int choosen_idx = 0;
-	if ((int)contours.size() > 1 && sorted_area[n_contour - 1] / sorted_area[n_contour - 2] > 3 )
+	if ((int)contours.size() > 1 && sorted_area[n_contour - 1] / sorted_area[n_contour - 2] > 1.5 )
 	{
 		// choose the largest one
 		int maxIdx = 0;
@@ -524,7 +523,15 @@ void xyVision::GetTarget::locating(vector<Point> & tarContour)
 	RotatedRect _box = minAreaRect(Mat(tarContour));
 	this->box = _box;
 
-	float aveLen = std::max(_box.size.width, _box.size.height);
+	float aveLen;
+	if (this->frameCounterTarget == 0 || this->lastLoc.z < 500)
+	{
+		aveLen = std::max(_box.size.width, _box.size.height);
+	}
+	else
+	{
+		aveLen = std::min(_box.size.width, _box.size.height);
+	}
 	//float aveLen = (_box.size.width + _box.size.height) / 2;
 	Point2f vtx[4];
 	_box.points(vtx);
@@ -532,6 +539,7 @@ void xyVision::GetTarget::locating(vector<Point> & tarContour)
 	Point3f center3d = Point3f(center2d.x, center2d.y, 1.0f);
 	Point3f pointInPlane = _K.inv() * center3d;
 	this->currentLoc = pointInPlane * _K(0,0) * (boardWidth / aveLen);
+	this->lastLoc = this->currentLoc;
 }
 
 void xyVision::GetTarget::runOneFrame()
@@ -632,6 +640,15 @@ void xyVision::GetTarget::runOneFrame_gpu()
 		isDetected = true;
 	}
 	locating(tarContour);
+}
+
+void xyVision::GetTarget::clearStates()
+{	
+	frameCounter = 0;
+	frameCounterTarget = 0;
+	isDetected = true;
+	this->useGPU = false;
+
 }
 //void xyVision::GetTarget::runOneFrame()
 //{
