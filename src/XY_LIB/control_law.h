@@ -24,7 +24,7 @@
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
 #define DIS_DIFF_WITH_MARK_HOVER		(1.5)	//hover to get close to the image, due to the high height, the dis is large
 #define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use
-#define MIN_ANGLE_TO_GET_IMAGE  		(2.5)	
+#define MIN_ANGLE_TO_GET_IMAGE  		(4.0)	
 #define MAX_EACH_DIS_IMAGE_GET_CLOSE	(3.0)	//each time the image target dis limit
 #define MAX_CTRL_VEL_UPDOWN_WITH_IMAGE	(0.35)	//change from 0.5 by zhanglei night 0114
 #define CAM_INSTALL_DELTA_X				(0.0)	//m,add to offset camera x, down to see drone, x is right 

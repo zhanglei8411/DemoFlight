@@ -109,7 +109,7 @@ void store_depend_stat(int _stat, char *strp)
 		case 0x08:
 			break;
 		case 0x10:
-			sprintf(strp, "[ctrl data - pitch: %.f, roll: %f, yaw: %f, thr: %f];", 	_log_user_ctrl_data.pitch_or_y,
+			sprintf(strp, "[ctrl data - pitch: %f, roll: %f, yaw: %f, thr: %f];", 	_log_user_ctrl_data.pitch_or_y,
 																					_log_user_ctrl_data.roll_or_x,
 																					_log_user_ctrl_data.yaw,
 																					_log_user_ctrl_data.thr_z);

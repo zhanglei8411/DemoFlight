@@ -171,7 +171,7 @@ static void *Debug_Check_And_Send_Thread_Func(void * arg)
 		}
 		else
 		{
-			while(i < (sizeof(_flag)/2) )
+			while(i < (sizeof(_flag) * 8) )
 			{
 				
 				if(_flag & 0x01)

@@ -1,5 +1,6 @@
 #include "image_identify.h"
 #include "thread_common_op.h"
+#include "wireless_debug.h"
 #include <semaphore.h>
 
 using namespace cv;
@@ -215,21 +216,27 @@ int save_image_into_sdcard(Mat _image)
 	
 }
 
-
 Mat img;
 static void *capture_thread_func(void * arg)
 {	
 	//thread_binding_cpu(NULL, CAPTURE_JOB_CPU);
 
 	int time_ = 0;
+	int reopen_cnt = 0;
 	//xyVision::GetTarget sample("config.ini");
+_reopen:
 	cv::VideoCapture cap(0);
 	if(!cap.isOpened())
 	{
 		printf("Cap not open\n");
-		pthread_exit(NULL);
+		XY_Debug_Sprintf(1, "Cap not open\n");
+		sleep(1);
+		reopen_cnt++;
+		if(reopen_cnt > 3)
+			goto _exit;
+		goto _reopen;
 	}
-
+	
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, (double)1280);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, (double)720);
 	cap.set(CV_CAP_PROP_SATURATION, (double)0.5);
@@ -265,6 +272,7 @@ static void *capture_thread_func(void * arg)
 			wait_capture_on();
 		}
 	}
+_exit:
 	pthread_exit(NULL);
 }
 

@@ -10,7 +10,7 @@
 
 
 #define HTTP_DEBUG_PRINT	1
-#define HTTP_FUNC_ON		0
+#define HTTP_FUNC_ON		1
 
 int sock_fd = -1;
 char http_post_str[HTTP_POST_DATA_SIZE];
@@ -310,7 +310,7 @@ static void *reported_data_thread_func(void * arg)
 		}
 		else
 		{
-			while(i < (sizeof(_flag) *8) )
+			while(i < (sizeof(_flag) * 8) )
 			{
 				
 				if(_flag & 0x01)
@@ -466,7 +466,11 @@ static void *wait_order_thread_func(void * arg)
 #endif
 				break;
 		}
-		
+		if( strstr(recv_buf, "Connection: close") )
+		{
+			printf("invalid order\n");
+			goto pre_again;
+		}
 		length = strstr(recv_buf, "}") - strstr(recv_buf, "{") + 1;
 		if(length == 2)
 		{
