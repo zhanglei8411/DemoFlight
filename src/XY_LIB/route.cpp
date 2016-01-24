@@ -1042,8 +1042,9 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
-				x_camera_diff_with_roll = _cpos.height * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-				y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+				//add the relative height adjust, 01-24 zhanglei 
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
 
 				// limit the cam diff
 				// add on 01-23
@@ -1122,6 +1123,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				if(integration_count >= 100) // 2 secend reset the integration.
 				{
 					no_GPS_mode_on = 0;
+					arrive_flag = 1;	// add for get into update the target
 #if DEBUG_PRINT
 					printf("GPS mode time out\n");
 #endif
