@@ -10,7 +10,7 @@
 
 
 #define HTTP_DEBUG_PRINT	1
-#define HTTP_FUNC_ON		0
+#define HTTP_FUNC_ON		1
 
 int sock_fd = -1;
 char http_post_str[HTTP_POST_DATA_SIZE];
@@ -310,7 +310,7 @@ static void *reported_data_thread_func(void * arg)
 		}
 		else
 		{
-			while(i < (sizeof(_flag) *8) )
+			while(i < (sizeof(_flag) * 8) )
 			{
 				
 				if(_flag & 0x01)
@@ -435,7 +435,8 @@ static void *wait_order_thread_func(void * arg)
 				close(sock_fd); 	//是否需要重新连接?
 				printf("some thing read error!\n");		
 				XY_Debug_Send_At_Once("some thing read error!\n");
-				goto _exit;
+				if( create_link_in_http() < 0 )
+					goto _exit;
 
 			case 0:		// 超时
 				printf("request time out!\n");
@@ -458,7 +459,9 @@ static void *wait_order_thread_func(void * arg)
 					close(sock_fd); 
 					printf("Network errors, stop!\n"); 
 					XY_Debug_Send_At_Once("Network errors, stop!\n");
-					goto _exit;
+					if( create_link_in_http() < 0 )
+						goto _exit;
+					
 				}
 
 #if HTTP_DEBUG_PRINT
@@ -466,7 +469,11 @@ static void *wait_order_thread_func(void * arg)
 #endif
 				break;
 		}
-		
+		if( strstr(recv_buf, "Connection: close") )
+		{
+			printf("invalid order\n");
+			goto pre_again;
+		}
 		length = strstr(recv_buf, "}") - strstr(recv_buf, "{") + 1;
 		if(length == 2)
 		{

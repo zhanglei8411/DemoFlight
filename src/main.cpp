@@ -133,7 +133,14 @@ int main(int argc,char **argv)
 
 	ioctl_led(2);
 
-#if 0
+	if(XY_Capture_Setup() < 0)
+	{
+		printf("Capture function Open ERROR...\n");
+		XY_Debug_Send_At_Once("Capture function Open ERROR.\n");
+	}
+
+	
+#if 1
 _relink:
 	if(XY_Http_Chat_Setup() < 0)
 	{
@@ -204,11 +211,7 @@ _relink:
 	
 	//ioctl_led(3);
 
-	if(XY_Capture_Setup() < 0)
-	{
-		printf("Capture function Open ERROR...\n");
-		XY_Debug_Send_At_Once("Capture function Open ERROR.\n");
-	}
+	
 #if 0
 	XY_Start_Capture();
 	while(1)

@@ -6,7 +6,7 @@
 #include "control_law.h"
 #include "http_chat_3g.h"
 
-#define DEBUG_PRINT	0
+#define DEBUG_PRINT	1
 
 Leg_Node *deliver_route_head = NULL;
 Leg_Node *goback_route_head = NULL;
@@ -404,7 +404,7 @@ static void *drone_deliver_down_thread_func(void * arg)
 	XY_Stop_Capture();
 
 	message_server_found_mark();
-		
+#if 0	
 	printf("------------------ start down to h3 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Down to H3 - %fm -----------------\n", DELIVER_HEIGHT_OF_DOWNH3);
 	while(1)
@@ -412,6 +412,7 @@ static void *drone_deliver_down_thread_func(void * arg)
 		if( drone_deliver_down_to_h3() == 1)
 			break;
 	}
+#endif
 	
 	printf("------------------ hover and put ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Hover And Put -----------------\n");
@@ -583,6 +584,7 @@ static void *drone_goback_down_thread_func(void * arg)
 			break;
 	}
 
+#if 0
 	printf("------------------ start find put point ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Start Find Put Point -----------------\n");
 	XY_Start_Capture();
@@ -591,7 +593,9 @@ static void *drone_goback_down_thread_func(void * arg)
 		if( drone_goback_find_put_point_with_image() == 1 )
 			break;	
 	}
+#endif
 
+	XY_Start_Capture();
 	printf("------------------ start down to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Down to H2 - %fm -----------------\n", GOBACK_HEIGHT_OF_DOWNH2);
 	while(1)
@@ -664,15 +668,15 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 	}
 
 	k1d = 0.05;
-	k1p = 0.2;	
+	k1p = 0.3;	//01-23 (0.2 to 0.3)	
 	k2d = 0.05;
-	k2p = 0.2;
+	k2p = 0.3;	//01-23 (0.2 to 0.3)
 
 	//For focus to point control
 	k1d_fp = 0.05;
-	k1p_fp = 0.2;	
+	k1p_fp = 0.3;	//01-23 (0.2 to 0.3)
 	k2d_fp = 0.05;
-	k2p_fp = 0.2;	
+	k2p_fp = 0.3;	//01-23 (0.2 to 0.3)
 		
 		
 	while(1)
@@ -686,7 +690,8 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 
 		last_distance_xyz = sqrt(pow((cxyz.x - exyz.x), 2) + pow((cxyz.y - exyz.y), 2));
 
-		if(last_distance_xyz < (2*HOVER_POINT_RANGE) )//Get the point and exit
+		//01-23 (2*HOVER_POINT_RANGE to 5*HOVER_POINT_RANGE)
+		if(last_distance_xyz < (5*HOVER_POINT_RANGE) )//Get the point and exit
 		{
 			return 1;
 		}
@@ -742,9 +747,9 @@ int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, flo
 	user_ctrl_data.yaw = 0;
 
 	k1d_fp = 0.05;
-	k1p_fp = 0.2;	
+	k1p_fp = 0.1;		//01-23 (0.2 to 0.1)
 	k2d_fp = 0.05;
-	k2p_fp = 0.2;
+	k2p_fp = 0.1;
 
 	geo2XYZ(_focus_point, &f_XYZ);
 	XYZ2xyz(_focus_point, f_XYZ, &fxyz);
@@ -868,6 +873,31 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 				//modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
 				x_camera_diff_with_roll = _cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
 				y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);// modified to use the Height not use offset.z by zl, 0113
+
+				//limit the cam diff
+				// add on 01-23
+				if( x_camera_diff_with_roll > 0 )
+				{				
+					if( x_camera_diff_with_roll > 1 )
+						x_camera_diff_with_roll = 1.0;
+				}
+				else
+				{				
+					if( x_camera_diff_with_roll < (0 - 1) )
+						x_camera_diff_with_roll = 0 - 1.0;
+				}
+
+
+				if( y_camera_diff_with_pitch > 0 )
+				{				
+					if( y_camera_diff_with_pitch > 1 )
+						y_camera_diff_with_pitch = 1.0;
+				}
+				else
+				{				
+					if( y_camera_diff_with_pitch < (0 - 1) )
+						y_camera_diff_with_pitch = 0 - 1.0;
+				}
 			
 				offset_adjust.x = offset.x - x_camera_diff_with_roll;
 				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
@@ -900,10 +930,10 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 			}
 
 			//hover to FP, but lower kp to the FP without image
-			k1d = 0.05;
-			k1p = 0.1;	//0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1
+			k1d = 0.05;		
+			k1p = 0.15;	//0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1	// 01-23 (0.1 to 0.15)
 			k2d = 0.05;
-			k2p = 0.1;		
+			k2p = 0.15;		// 01-23 (0.1 to 0.15) not flight test 
 
 			//use the origin updated last time "target_origin_pos", to get the current cxyz
 			geo2XYZ(_cpos, &cXYZ);
@@ -921,7 +951,7 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 			//last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
 			
 			//if (last_dis_to_mark < HOVER_POINT_RANGE)
-			if(last_dis_to_mark < (5*HOVER_POINT_RANGE) )//from 1.5 to 5*0.1=0.5, zhanglei 0123
+			if(last_dis_to_mark < (10*HOVER_POINT_RANGE) )//from 1.5 to 10*0.1=1, zhanglei 0123
 			{
 				arrive_flag = 1;
 				target_update=0;
@@ -968,6 +998,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	XYZ	cXYZ;
 	Center_xyz cxyz;
 	api_pos_data_t target_origin_pos;
+	int arrive_flag = 1;
 
 	DJI_Pro_Get_Pos(&_focus_point);
 
@@ -1004,14 +1035,41 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			&& fabs(pitch_angle) < MIN_ANGLE_TO_GET_IMAGE
 			|| target_update == 1 )
 		{	
-			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
+			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1)
 			{
+				arrive_flag = 0;
 				offset.x = offset.x / 100;
 				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
-				x_camera_diff_with_roll = _cpos.height * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-				y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+				//add the relative height adjust, 01-24 zhanglei 
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+
+				// limit the cam diff
+				// add on 01-23
+				if( x_camera_diff_with_roll > 0 )
+				{				
+					if( x_camera_diff_with_roll > 1 )
+						x_camera_diff_with_roll = 1.0;
+				}
+				else
+				{				
+					if( x_camera_diff_with_roll < (0 - 1) )
+						x_camera_diff_with_roll = 0 - 1.0;
+				}
+
+
+				if( y_camera_diff_with_pitch > 0 )
+				{				
+					if( y_camera_diff_with_pitch > 1 )
+						y_camera_diff_with_pitch = 1.0;
+				}
+				else
+				{				
+					if( y_camera_diff_with_pitch < (0 - 1) )
+						y_camera_diff_with_pitch = 0 - 1.0;
+				}
 
 				offset_adjust.x = offset.x - x_camera_diff_with_roll;
 				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
@@ -1048,9 +1106,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
 					cvel_no_gps.y = _cvel.y;
 				}
+
+				
 #if DEBUG_PRINT
 				printf("no_GPS_mode_on: %d\n", no_GPS_mode_on);
-				printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+				printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y, last_dis_to_mark);
 #endif
 			}
 			
@@ -1063,6 +1123,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				if(integration_count >= 100) // 2 secend reset the integration.
 				{
 					no_GPS_mode_on = 0;
+					arrive_flag = 1;	// add for get into update the target
 #if DEBUG_PRINT
 					printf("GPS mode time out\n");
 #endif
@@ -1141,22 +1202,25 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			{		
 				last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
 				
-				if (last_dis_to_mark < HOVER_POINT_RANGE)
+				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
 				{
 					target_update = 0;
 					no_GPS_mode_on = 0;
+					arrive_flag = 1;
 				}
 			}
 			else
 			{
 				last_dis_to_mark = sqrt(pow((cxyz.x - cur_target_xyz.x), 2) + pow((cxyz.y - cur_target_xyz.y), 2));
 				
-				if (last_dis_to_mark < HOVER_POINT_RANGE)
+				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
 				{
 					target_update = 0;
 					no_GPS_mode_on = 0;
+					arrive_flag = 1;
 				}
 			}
+
 		}
 		else
 		{
@@ -1261,8 +1325,33 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
-				x_camera_diff_with_roll = _cpos.height * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-				y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+
+				// limit the cam diff
+				// add on 01-23
+				if( x_camera_diff_with_roll > 0 )
+				{				
+					if( x_camera_diff_with_roll > 1 )
+						x_camera_diff_with_roll = 1.0;
+				}
+				else
+				{				
+					if( x_camera_diff_with_roll < (0 - 1) )
+						x_camera_diff_with_roll = 0 - 1.0;
+				}
+
+
+				if( y_camera_diff_with_pitch > 0 )
+				{				
+					if( y_camera_diff_with_pitch > 1 )
+						y_camera_diff_with_pitch = 1.0;
+				}
+				else
+				{				
+					if( y_camera_diff_with_pitch < (0 - 1) )
+						y_camera_diff_with_pitch = 0 - 1.0;
+				}
 
 				offset_adjust.x = offset.x - x_camera_diff_with_roll;
 				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
@@ -1466,6 +1555,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 {
 	attitude_data_t user_ctrl_data;
+	api_pos_data_t _focus_point;
 	double k1d_fp, k1p_fp, k2d_fp, k2p_fp;
 	double last_distance_xyz = 0.0;
 	double x_n_vel, y_e_vel;
@@ -1508,7 +1598,7 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 	cvel_no_gps.z = 0;
 
 		
-	while(integration_count < 50)
+	while(integration_count < 100)
 	{
 			
 		//get the acc and integeration
@@ -1612,7 +1702,7 @@ int temporary_init_deliver_route_list(void)
 	//ÉèÖÃÖÕµãÎ»ÖÃ, not finish	
 	//set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
 
-#if 0
+#if 1
 	set_leg_end_pos(&task_info, XYI_TERRACE_LONGTI, XYI_TERRACE_LATI, XYI_TERRACE_ALTI);
 #else
 	set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);

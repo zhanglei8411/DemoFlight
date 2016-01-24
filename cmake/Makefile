@@ -1,7 +1,7 @@
 TARGET = ../output/xunyi-controlled-exe
 
 
-OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o fisheye.o getTargetLoc.o inifile.o image_identify.o thread_common_op.o status_led.o network_chat_3g.o sd_store_log.o
+OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o fisheye.o getTargetLoc.o inifile.o image_identify.o thread_common_op.o status_led.o sd_store_log.o http_chat_3g.o cJSON.o
 
 CFLAGS = -Wall -O3 -DPLATFORM_LINUX -DTINYXML_CFG -Isrc/ -I/src/DJI_LIB -I/src/XY_LIB -I/src/XY_LIB/common -I/usr/local/include/opencv -I/usr/local/include
 
@@ -73,8 +73,11 @@ thread_common_op.o : ../src/XY_LIB/thread_common_op.cpp
 status_led.o : ../src/XY_LIB/status_led.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/status_led.cpp
 	
-network_chat_3g.o : ../src/XY_LIB/network_chat_3g.cpp
-	$(CXX) $(CFLAGS) -c ../src/XY_LIB/network_chat_3g.cpp
+http_chat_3g.o : ../src/XY_LIB/http_chat_3g.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/http_chat_3g.cpp
+
+cJSON.o : ../src/XY_LIB/cJSON.c
+	gcc $(CFLAGS) -c ../src/XY_LIB/cJSON.c
 	
 sd_store_log.o : ../src/XY_LIB/sd_store_log.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/sd_store_log.cpp
