@@ -6,8 +6,8 @@
 #include "opencv2/video/tracking.hpp"
 #include "fisheye.hpp"
 #include <string>
-#include <iostream>
 #include <stdio.h>
+#include <iostream>
 #include "getTargetLoc.hpp"
 #include "inifile.h"
 #include <time.h>
@@ -130,6 +130,7 @@ void xyVision::GetTarget::setCameraParams(string configFileName)
 
 	this->cameraInfo.newSize = Size(int(imageWidth*scale), int(imageHeight*scale));
 
+
 }
 
 xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
@@ -163,7 +164,7 @@ xyVision::GetTarget& xyVision::GetTarget::operator<<(const Mat& image)
 		{
 			KF.predict();
 			Mat estimate = KF.correct(Mat(_point));
-			//this->currentLoc = Point3f(estimate.at<float>(0), estimate.at<float>(1), estimate.at<float>(2));
+			this->currentLoc = Point3f(estimate.at<float>(0), estimate.at<float>(1), estimate.at<float>(2));
 		}
 		this->frameCounterTarget ++;
 	}
@@ -386,9 +387,9 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
 	split(img2, chs);
 
 	Mat bi_lab, bi_rgb;
-	inRange(img_lab, Scalar(0, 155, 0), Scalar(255, 255, 255), bi_lab);
+	inRange(img_lab, Scalar(0, 140, 0), Scalar(255, 255, 255), bi_lab);
 	//inRange(img_lab, Scalar(0, 130, 0), Scalar(255, 255, 255), bi_lab);
-	cv::threshold(chs[2], bi_rgb, 50, 255, THRESH_BINARY);
+	cv::threshold(chs[2], bi_rgb, 100, 255, THRESH_BINARY);
 
 	bi_lab.convertTo(bi_lab, CV_32F);
 	bi_rgb.convertTo(bi_rgb, CV_32F);
@@ -396,7 +397,7 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
 	cv::threshold(bi_lab.mul(bi_rgb), bi, 0, 255, THRESH_BINARY);
 	bi.convertTo(bi, CV_8U);
 
-	Mat kernel = cv::Mat::ones(5, 5, CV_8UC1);
+	Mat kernel = cv::Mat::ones(10, 10, CV_8UC1);
 	dilate(bi, bi, kernel);
 	erode(bi, bi, kernel);
 	//cv::imwrite("bi.bmp", bi);
@@ -420,18 +421,26 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 
 	// filter areas that are not square
 	vector<vector<Point> > contours_filter;
+	std::vector<double> contours_aeras_filter;
+	std::vector<double> center_dis_filter;
+	std::vector<double> ratio_filter;
+	std::vector<RotatedRect> boxs_filter;
 	for (int i = 0; i < (int)contours.size(); ++i)
 	{
-		//if (i == (int)contours.size() - 1)
-		//{
-		//	cout << " " << endl;
-		//}
 		RotatedRect box = minAreaRect(Mat(contours[i]));
 		float height = float(box.size.height);
 		float width = float(box.size.width);
-		if (height / width < 3 && width / height < 3)
+		double aera = contourArea(contours[i]);
+		double dis = std::abs(box.center.x - (double)sz.width / 2.0) + std::abs(box.center.y - (double)sz.height/2.0);
+		// 计算旋转矩形覆盖比例
+		double ratio = computeRotatedRect(contours[i], sz, box, bi);
+		if (height / width < 3 && width / height < 3 && aera > (sz.width/80.0f*sz.height/80.0f) && ratio > 0.7)
 		{
 			contours_filter.push_back(contours[i]);
+			center_dis_filter.push_back(dis);
+			boxs_filter.push_back(box);
+			contours_aeras_filter.push_back(aera);
+			ratio_filter.push_back(ratio);
 		}
 	}
 	contours = contours_filter;
@@ -441,55 +450,70 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 		return false;
 	}
 
+	// choose the max one
+	int choosen_idx = 0;
+	int maxIdx = 0;
+	double maxAera = contours_aeras_filter[0];
+	for (int i = 1; i < (int)contours.size(); ++i)
+	{
+		double conAera_i = contours_aeras_filter[i];
+		if (conAera_i > maxAera)
+		{
+			maxAera = conAera_i;
+			maxIdx = i;
+		}
+	}
+	choosen_idx = maxIdx;
+
 	// if max area is 1.5 times larger than the second large one,
 	//then choose the largest one, otherwise, choose the center one.
-	int n_contour = (int)contours.size();
-	std::vector<double> contours_aeras(n_contour);
-	std::vector<double> center_dis(n_contour);
-	for (int i = 0; i < n_contour; ++i)
-	{
-		contours_aeras[i] = contourArea(contours[i]);
-		Rect rect = boundingRect(contours[i]);
-		center_dis[i] = std::abs(rect.x - (double)sz.width / 2.0) + std::abs(rect.y - (double)sz.height/2.0);
-	}
-	std::vector<double> sorted_area = contours_aeras;
-	std::sort(sorted_area.begin(), sorted_area.end());
-	int choosen_idx = 0;
-	if ((int)contours.size() > 1 && sorted_area[n_contour - 1] / sorted_area[n_contour - 2] > 1.5 )
-	{
-		// choose the largest one
-		int maxIdx = 0;
-		double maxAera = contours_aeras[0];
-		for (int i = 1; i < (int)contours.size(); ++i)
-		{
-			double conAera_i = contours_aeras[i];
-			if (conAera_i > maxAera)
-			{
-				maxAera = conAera_i;
-				maxIdx = i;
-			}
-		}
-		choosen_idx = maxIdx;
-	}
-	else
-	{
-		int nearCenIdx = 0;
-		double nearCenterDis = center_dis[0];
-		for (int i = 1; i < (int)contours.size(); ++i)
-		{
-			double cenDis_i = center_dis[i];
-			if (cenDis_i < nearCenterDis)
-			{
-				nearCenterDis = cenDis_i;
-				nearCenIdx = i;
-			}
-		}
-		choosen_idx = nearCenIdx;
-	}
-	double choosen_aera = contours_aeras[choosen_idx];
+	//int n_contour = (int)contours.size();
+	//std::vector<double> contours_aeras(n_contour);
+	//std::vector<double> center_dis(n_contour);
+	//for (int i = 0; i < n_contour; ++i)
+	//{
+	//	contours_aeras[i] = contourArea(contours[i]);
+	//	Rect rect = boundingRect(contours[i]);
+	//	center_dis[i] = std::abs(rect.x - (double)sz.width / 2.0) + std::abs(rect.y - (double)sz.height/2.0);
+	//}
+	//std::vector<double> sorted_area = contours_aeras;
+	//std::sort(sorted_area.begin(), sorted_area.end());
+	//int choosen_idx = 0;
+	//if ((int)contours.size() > 1 && sorted_area[n_contour - 1] / sorted_area[n_contour - 2] > 1.5 )
+	//{
+	//	// choose the largest one
+	//	int maxIdx = 0;
+	//	double maxAera = contours_aeras[0];
+	//	for (int i = 1; i < (int)contours.size(); ++i)
+	//	{
+	//		double conAera_i = contours_aeras[i];
+	//		if (conAera_i > maxAera)
+	//		{
+	//			maxAera = conAera_i;
+	//			maxIdx = i;
+	//		}
+	//	}
+	//	choosen_idx = maxIdx;
+	//}
+	//else
+	//{
+	//	int nearCenIdx = 0;
+	//	double nearCenterDis = center_dis[0];
+	//	for (int i = 1; i < (int)contours.size(); ++i)
+	//	{
+	//		double cenDis_i = center_dis[i];
+	//		if (cenDis_i < nearCenterDis)
+	//		{
+	//			nearCenterDis = cenDis_i;
+	//			nearCenIdx = i;
+	//		}
+	//	}
+	//	choosen_idx = nearCenIdx;
+	//}
+	double choosen_aera = contours_aeras_filter[choosen_idx];
 
-	if (choosen_aera < (sz.width/80.0f*sz.height/80.0f))
-		return false;
+	//if (choosen_aera < (sz.width/80.0f*sz.height/80.0f))
+	//	return false;
 	if (this->frameCounterTarget > 0 &&
 		((double)choosen_aera / (double)this->lastArea < 3.0/10 ))
 	{
@@ -508,6 +532,36 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
 	this->lastArea = choosen_aera;
 	return true;
 }
+
+double xyVision::GetTarget::computeRotatedRect(const vector<Point>& contour, cv::Size sz, RotatedRect box, Mat& bi)
+{
+	Point2f vertices[4];
+	box.points(vertices);
+	Point points[4];
+	for (int i = 0; i < 4; ++i)
+	{
+		points[i] = Point((int)vertices[i].x, (int)vertices[i].y);
+	}
+
+	Mat tmp = Mat::zeros(sz, CV_8U);
+	cv::fillConvexPoly(tmp, points, 4, Scalar(1));
+
+	Mat boxIdx;
+	findNonZero(tmp, boxIdx);
+	double n_pixels = (double)boxIdx.total();
+	double n_nonZero = 0;
+	for (int i = 0; i < boxIdx.total(); ++i)
+	{
+		Point _p = boxIdx.at<Point>(i);
+		if (bi.at<unsigned char>(_p.y, _p.x) > 0)
+		{
+			n_nonZero = n_nonZero + 1;
+		}
+	}
+	return n_nonZero / (n_pixels+1e-5);
+}
+
+
 void xyVision::GetTarget::locating(vector<Point> & tarContour)
 {
 	float scaleFactor = this->proInfo.scale;

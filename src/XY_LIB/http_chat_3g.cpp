@@ -111,7 +111,7 @@ int create_socket(int *_sock_fd)
 
 int setup_addr(struct sockaddr_in *_addr, unsigned short _port, const char *hostname)
 {
-	struct hostent *host;
+	struct hostent *host = NULL;
 	
 	_addr->sin_family = AF_INET;
 	_addr->sin_port = htons(_port);
@@ -162,11 +162,13 @@ int create_link_in_http(void)
 {
 	if(create_socket(&sock_fd) < 0)
 	{
+		printf("create socket error.\n");
 		return -1;
 	}
 
 	if(connect_to_server(sock_fd) < 0)
 	{
+		printf("connect to server error.\n");
 		close(sock_fd);
 		return -1;
 	}
@@ -197,7 +199,7 @@ int send_http_post_data(char *_data)
 	printf("%s", http_post_str);
 #endif
 
-	ret = send(sock_fd, (void *)http_post_str, strlen(http_post_str), 0); 
+	ret = send(sock_fd, (void *)http_post_str, strlen((const char *)http_post_str), 0); 
 	if (ret < 0)
 	{ 
 		printf("send error %d, Error message'%s'\n", errno, strerror(errno)); 
@@ -287,7 +289,7 @@ static void *reported_data_thread_func(void * arg)
 	int _flag = 0;
 	int i = 0;
 	int ret = 0;
-	int err_cnt[3] = {0};
+	int err_cnt[10] = {0};
 	int recv_bytes;
 	char recv_buf[512];
 	struct timeval tv_recv_timeo;
@@ -338,13 +340,15 @@ static void *reported_data_thread_func(void * arg)
 #if 1
 						memset(recv_buf, 0, 512);
 						recv_bytes = recv(sock_fd, (void *)recv_buf, 512, 0);	// recv is blocking system calls
-						
 						if( recv_bytes == 0 )
 						{
 							close(sock_fd); 
 							printf("Network errors, stop!\n"); 
 							if( create_link_in_http() < 0 )
+							{
+								printf("create link in http error.\n");
 								goto _exit;
+							}
 						}
 						else if( recv_bytes == -1 )	//time out
 						{
@@ -398,7 +402,7 @@ static void *wait_order_thread_func(void * arg)
 	struct timeval tpstart, tpend;
 	int timeuse, timesleep;
 	int length = 0;
-	char json_buf[200] = {0};
+	char json_buf[500] = {0};
 
 	memset(http_req, 0, HTTP_REQ_SIZE);
 	strcat(http_req, "GET /api/order/get_json_order HTTP/1.1\r\n");		//request line
@@ -435,7 +439,11 @@ static void *wait_order_thread_func(void * arg)
 				close(sock_fd); 	//是否需要重新连接?
 				printf("some thing read error!\n");		
 				XY_Debug_Send_At_Once("some thing read error!\n");
-				goto _exit;
+				if( create_link_in_http() < 0 )
+				{
+					printf("create link in http error.\n");
+					goto _exit;
+				}
 
 			case 0:		// 超时
 				printf("request time out!\n");
@@ -458,7 +466,12 @@ static void *wait_order_thread_func(void * arg)
 					close(sock_fd); 
 					printf("Network errors, stop!\n"); 
 					XY_Debug_Send_At_Once("Network errors, stop!\n");
-					goto _exit;
+					if( create_link_in_http() < 0 )
+					{
+						printf("create link in http error.\n");
+						goto _exit;
+					}
+					
 				}
 
 #if HTTP_DEBUG_PRINT
@@ -468,8 +481,13 @@ static void *wait_order_thread_func(void * arg)
 		}
 		if( strstr(recv_buf, "Connection: close") )
 		{
-			printf("invalid order\n");
-			goto pre_again;
+			printf("Connection: close\n");
+			close(sock_fd); 
+			if( create_link_in_http() < 0 )
+			{
+				printf("create link in http error.\n");
+				goto _exit;
+			}
 		}
 		length = strstr(recv_buf, "}") - strstr(recv_buf, "{") + 1;
 		if(length == 2)

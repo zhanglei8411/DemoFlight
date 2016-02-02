@@ -6,7 +6,7 @@
 #include "control_law.h"
 #include "http_chat_3g.h"
 
-#define DEBUG_PRINT	0
+#define DEBUG_PRINT	1
 
 Leg_Node *deliver_route_head = NULL;
 Leg_Node *goback_route_head = NULL;
@@ -220,7 +220,7 @@ int drone_deliver_up_to_h2(void)
 	threshold 	= DELIVER_THRESHOLD_OF_UP_TO_H2_OUT;		//m
 	kp_z 		= DELIVER_UP_TO_H2_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 }
 
@@ -241,6 +241,7 @@ int drone_deliver_up_to_h3(void)
 
 static void *drone_deliver_up_thread_func(void * arg)
 {
+	XY_Start_Capture();
 	printf("------------------ start up to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H2 - %fm -----------------\n", DELIVER_HEIGHT_OF_UPH2);
 	while(1)
@@ -248,7 +249,7 @@ static void *drone_deliver_up_thread_func(void * arg)
 		if( drone_deliver_up_to_h2() == 1)
 			break;
 	}
-
+	XY_Stop_Capture();
 
 	printf("------------------ start up to h3 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H3 - %fm -----------------\n", DELIVER_HEIGHT_OF_UPH3);
@@ -443,7 +444,7 @@ int drone_goback_up_to_h2(void)
 	threshold 	= GOBACK_THRESHOLD_OF_UP_TO_H2_OUT;			//m
 	kp_z 		= GOBACK_UP_TO_H2_KPZ;
 	
-	if( XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 }
 
@@ -463,7 +464,7 @@ static void *drone_goback_up_thread_func(void * arg)
 		if( drone_goback_up_to_h2() == 1)
 			break;
 	}
-	XY_Stop_Capture();
+	
 
 	printf("------------------ start up to h3 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H3 - %fm -----------------\n", GOBACK_HEIGHT_OF_UPH3);
@@ -472,6 +473,8 @@ static void *drone_goback_up_thread_func(void * arg)
 		if( drone_goback_up_to_h3() == 1)
 			break;
 	}
+
+	XY_Stop_Capture();
 	
 	pthread_mutex_lock(&mutex);
 	pthread_cond_signal(&cond);	
@@ -604,7 +607,8 @@ static void *drone_goback_down_thread_func(void * arg)
 			break;
 	}
 	XY_Stop_Capture();
-	
+
+#if 0
 	printf("------------------ start down to h3 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Down to H3 - %fm -----------------\n", GOBACK_HEIGHT_OF_DOWNH3);
 	while(1)
@@ -612,6 +616,7 @@ static void *drone_goback_down_thread_func(void * arg)
 		if( drone_goback_down_to_h3() == 1)
 			break;
 	}
+#endif
 	
 	pthread_mutex_lock(&mutex);
 	pthread_cond_signal(&cond);	
@@ -721,7 +726,7 @@ int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback)
 	
 	
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
-		set_attitude_data(user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
 		usleep(20000);// The control period
 	}
 }
@@ -967,10 +972,265 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
 		
 		
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
 		usleep(20000);
 	}
 }
 
+int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z)
+{
+	api_vel_data_t _cvel;
+	api_pos_data_t _cpos;
+	api_quaternion_data_t _cquaternion;
+	attitude_data_t user_ctrl_data;
+	api_pos_data_t _focus_point;
+	float yaw_angle, roll_angle, pitch_angle;
+	float yaw_rard, roll_rard, pitch_rard;
+	Offset offset, offset_adjust;
+	int target_has_updated = 0;
+	float x_camera_diff_with_roll, y_camera_diff_with_pitch;
+	float last_dis_to_mark, last_velocity;
+	Center_xyz cur_target_xyz;
+	Center_xyz cxyz_no_gps;
+	float gps_ctrl_x,gps_ctrl_y, del_ctrl_x_gps, del_ctrl_y_gps;
+	api_common_data_t g_acc;
+	api_vel_data_t cvel_no_gps;
+	int integration_count;
+	double y_e_vel, x_n_vel;
+	double k1d, k1p, k2d, k2p;
+	float target_dist;
+	int arrive_flag = 1;
+	int image_height_use_flag = 0;
+
+	
+	DJI_Pro_Get_Pos(&_focus_point);
+	DJI_Pro_Get_GroundVo(&_cvel);
+
+	user_ctrl_data.ctrl_flag = 0x40;
+	user_ctrl_data.yaw = 0;
+	user_ctrl_data.roll_or_x = 0;
+	user_ctrl_data.pitch_or_y = 0;
+			
+	target_has_updated = 0;
+	integration_count = 0;
+	x_n_vel = y_e_vel = 0;
+
+	cxyz_no_gps.x = 0;
+	cxyz_no_gps.y = 0;
+
+	cur_target_xyz.x = 0;
+	cur_target_xyz.y = 0;	
+	
+	cvel_no_gps.x = _cvel.x;
+	cvel_no_gps.y = _cvel.y;
+
+	target_dist = 0;
+
+	//hover to FP, but lower kp to the FP without image
+	k1d = 0.05;
+	k1p = 0.1; //simulation test 0113;adjust to 0.05,flight test ok 0114, 01-28 (0.05 to 0.01)
+	k2d = 0.05;
+	k2p = 0.1; //01-28 (0.05 to 0.01), 
+	
+	while(1)
+	{
+		DJI_Pro_Get_Pos(&_cpos);
+		DJI_Pro_Get_GroundVo(&_cvel);
+		DJI_Pro_Get_Quaternion(&_cquaternion);
+
+		roll_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
+									1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2) 	);
+		
+		pitch_rard	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1) 		);
+		
+		yaw_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
+									1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3) 	);
+
+		yaw_angle	= 180 / PI * yaw_rard;
+		roll_angle	= 180 / PI * roll_rard;
+		pitch_angle = 180 / PI * pitch_rard;
+
+		if ( 1 )
+		{	
+			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1)
+			{
+				arrive_flag = 0;
+				target_has_updated = 1;
+				
+				offset.x = offset.x / 100;
+				offset.y = offset.y / 100;
+				offset.z = offset.z / 100;
+
+				//adjust with the camera install delta dis
+				offset.x -= CAM_INSTALL_DELTA_X;
+				offset.y -= CAM_INSTALL_DELTA_Y;
+
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
+
+				// limit the cam diff
+				// add on 01-23
+				if( x_camera_diff_with_roll > 0 )
+				{				
+					if( x_camera_diff_with_roll > 1 )
+						x_camera_diff_with_roll = 1.0;
+				}
+				else
+				{				
+					if( x_camera_diff_with_roll < (0 - 1) )
+						x_camera_diff_with_roll = 0 - 1.0;
+				}
+
+
+				if( y_camera_diff_with_pitch > 0 )
+				{				
+					if( y_camera_diff_with_pitch > 1 )
+						y_camera_diff_with_pitch = 1.0;
+				}
+				else
+				{				
+					if( y_camera_diff_with_pitch < (0 - 1) )
+						y_camera_diff_with_pitch = 0 - 1.0;
+				}
+
+				offset_adjust.x = offset.x - x_camera_diff_with_roll;
+				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+				set_log_offset_adjust(offset_adjust);
+				
+				//set the target with the image target with xyz
+				cur_target_xyz.x = (-1) * (offset_adjust.y);	//add north offset
+				cur_target_xyz.y = offset_adjust.x; 			//add east offset	
+
+
+				target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+				//add limit to current target, the step is 3m
+				if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+				{
+					cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+					cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+				}
+				
+				
+				integration_count = 0;
+
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
+	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
+				
+			}
+
+			
+			DJI_Pro_Get_GroundAcc(&g_acc);
+							
+			//Integ x,y by velocity
+			cxyz_no_gps.x += cvel_no_gps.x * DT;
+			cxyz_no_gps.y += cvel_no_gps.y * DT;
+	
+
+			//Integ velocity by acc
+			cvel_no_gps.x += g_acc.x * DT;
+			cvel_no_gps.y += g_acc.y * DT;
+
+			integration_count++;
+			//limit the time length of using nogps mode, add by zhanglei 0118
+			if(integration_count > 100) // 2 secend reset the integration.
+			{
+				arrive_flag = 1;		// add for get into update the target
+				target_has_updated = 0;
+				integration_count = 0;
+
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
+				
+				cur_target_xyz.x = 0;
+				cur_target_xyz.y = 0;	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
+
+				target_dist = 0;
+				printf("deliver integration time out\n");
+			}	
+				
+			x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
+			y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
+
+			//lower the x y control
+			if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				x_n_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+			else if(x_n_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				x_n_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+
+			if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				y_e_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+			else if(y_e_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				y_e_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+
+			user_ctrl_data.roll_or_x = x_n_vel;
+			user_ctrl_data.pitch_or_y = y_e_vel;
+
+
+			last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
+			
+			if (last_dis_to_mark < (target_dist * 0.5) )
+			{
+				printf("last_dis_to_mark is %f\n", last_dis_to_mark);
+				target_has_updated = 0;
+				integration_count = 100;
+				arrive_flag = 1;
+			}
+			
+			
+		}
+		else
+		{
+			user_ctrl_data.roll_or_x = 0;
+			user_ctrl_data.pitch_or_y = 0;
+		}
+		
+		user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
+
+
+		if( user_ctrl_data.thr_z > 0 )
+		{
+			if( user_ctrl_data.thr_z < _min_vel )
+				user_ctrl_data.thr_z = _min_vel;
+
+			if( user_ctrl_data.thr_z > _max_vel )
+				user_ctrl_data.thr_z = _max_vel;
+		}
+		else
+		{
+			if( user_ctrl_data.thr_z > (0 - _min_vel) )
+				user_ctrl_data.thr_z = 0 - _min_vel;
+
+			if( user_ctrl_data.thr_z < (0 - _max_vel) )
+				user_ctrl_data.thr_z = 0 - _max_vel;
+		}
+
+		//printf("last dis: %f\n", (_t_height - _cpos.height));
+		if(fabs(_t_height - _cpos.height) < _threshold)
+		{
+			return 1;
+		}
+		
+		DJI_Pro_Attitude_Control(&user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
+		usleep(20000);
+	}
+}
 
 
 int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z)
@@ -983,33 +1243,60 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	float yaw_angle, roll_angle, pitch_angle;
     float yaw_rard, roll_rard, pitch_rard;
 	Offset offset, offset_adjust;
-	int target_update = 0;
+	int target_has_updated = 0;
 	float x_camera_diff_with_roll, y_camera_diff_with_pitch;
 	float last_dis_to_mark, last_velocity;
 	Center_xyz cur_target_xyz;
-	int no_GPS_mode_on = 0;
 	Center_xyz cxyz_no_gps;
 	float gps_ctrl_x,gps_ctrl_y, del_ctrl_x_gps, del_ctrl_y_gps;
 	api_common_data_t g_acc;
 	api_vel_data_t cvel_no_gps;
-	int integration_count;
+	int integration_count_xy, integration_count_z;
 	double y_e_vel, x_n_vel;
 	double k1d, k1p, k2d, k2p;
-	XYZ	cXYZ;
-	Center_xyz cxyz;
-	api_pos_data_t target_origin_pos;
+	float target_dist;
 	int arrive_flag = 1;
+	int image_height_use_flag = 0;
+	float offset_z1, offset_z2;
+	int count_time_integration_flag;
+	int offset_z_2_5_flag = 0, offset_z_3_0_flag = 0;
+	int time_cnt = 0;
+	int return_timeout = 0;
+	int return_timeout_flag = 0;
 
+	
 	DJI_Pro_Get_Pos(&_focus_point);
+	DJI_Pro_Get_GroundVo(&_cvel);
 
 	user_ctrl_data.ctrl_flag = 0x40;
 	user_ctrl_data.yaw = 0;
 	user_ctrl_data.roll_or_x = 0;
 	user_ctrl_data.pitch_or_y = 0;
 			
-	target_update = 0;
-	DJI_Pro_Get_Pos(&_cpos);
-	target_origin_pos = _cpos;
+	target_has_updated = 0;
+	integration_count_xy = 0;
+	integration_count_z = 0;
+	x_n_vel = y_e_vel = 0;
+
+	cxyz_no_gps.x = 0;
+	cxyz_no_gps.y = 0;
+	cxyz_no_gps.z = _focus_point.height;
+
+	cur_target_xyz.x = 0;
+	cur_target_xyz.y = 0;	
+	
+	cvel_no_gps.x = _cvel.x;
+	cvel_no_gps.y = _cvel.y;
+
+	target_dist = 0;
+
+	offset_z1 = offset_z2 = 0.00001;
+
+	//hover to FP, but lower kp to the FP without image
+	k1d = 0.05;
+	k1p = 0.1;	//simulation test 0113;adjust to 0.05,flight test ok 0114
+	k2d = 0.05;
+	k2p = 0.1;	
 	
 	while(1)
 	{
@@ -1029,20 +1316,382 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		roll_angle 	= 180 / PI * roll_rard;
 		pitch_angle = 180 / PI * pitch_rard;
 
-		//steady enough to get image
-		if (sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y) < MIN_VEL_TO_GET_IMAGE
-			&& fabs(roll_angle) < MIN_ANGLE_TO_GET_IMAGE
-			&& fabs(pitch_angle) < MIN_ANGLE_TO_GET_IMAGE
-			|| target_update == 1 )
+		if ( 1 )
+		{	
+			if( return_timeout_flag == 1 )
+			{
+				return_timeout++;
+				if( return_timeout%50 == 0 )
+				{
+					printf("return_timeout is %d\n", return_timeout);
+				}
+
+				if(return_timeout >= (12.5/0.02))
+				{
+					printf("deliver down to h2 timeout return\n");
+					return 1;
+				}
+			}
+		
+			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
+			{
+				offset.z = offset.z / 100;
+
+				integration_count_z = 0;
+
+				if( offset.z < 5.0 && _cpos.height < 10.0 && return_timeout_flag == 0 )
+				{
+					printf("now start to cal return timeout\n");
+					return_timeout_flag = 1;
+				}
+
+				//add on 01-31, under 2.0m, only use integration height
+				if(_cpos.height < 8.0)
+				{
+					if ( (offset.z < 3.0 && offset.z > 2.5) && offset_z_3_0_flag == 0)
+					{
+						offset_z_3_0_flag = 1;
+						count_time_integration_flag = 1;
+						offset_z1 = offset.z;
+						printf("                                                    offset_z1 is %f\n", offset_z1);
+					}
+
+					if ( (offset.z < 2.5 && offset.z > 2.0) && offset_z_2_5_flag == 0 && offset_z_3_0_flag == 1)
+					{
+						offset_z_2_5_flag = 1;
+						count_time_integration_flag = 0;
+						offset_z2 = offset.z;
+						cxyz_no_gps.z = offset.z;
+						cvel_no_gps.z = _cvel.z;
+						printf("                                                   offset_z2 is %f\n", offset_z2);
+					}
+				}
+
+
+				if(offset.z > 2.5 && offset_z_2_5_flag != 1)
+				{
+					cvel_no_gps.z = _cvel.z;
+				}
+				
+				if(offset.z > 2.5 && offset_z_2_5_flag != 1)
+				{
+					cxyz_no_gps.z = offset.z;					
+				}
+				
+				if( arrive_flag == 1 )
+				{	
+					arrive_flag = 0;
+					target_has_updated = 1;
+					
+					offset.x = offset.x / 100;
+					offset.y = offset.y / 100;
+					
+					//adjust with the camera install delta dis
+					offset.x -= CAM_INSTALL_DELTA_X;
+					offset.y -= CAM_INSTALL_DELTA_Y;
+
+					x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+					y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+
+					// limit the cam diff
+					// add on 01-23
+					if( x_camera_diff_with_roll > 0 )
+					{				
+						if( x_camera_diff_with_roll > 1 )
+							x_camera_diff_with_roll = 1.0;
+					}
+					else
+					{				
+						if( x_camera_diff_with_roll < (0 - 1) )
+							x_camera_diff_with_roll = 0 - 1.0;
+					}
+
+
+					if( y_camera_diff_with_pitch > 0 )
+					{				
+						if( y_camera_diff_with_pitch > 1 )
+							y_camera_diff_with_pitch = 1.0;
+					}
+					else
+					{				
+						if( y_camera_diff_with_pitch < (0 - 1) )
+							y_camera_diff_with_pitch = 0 - 1.0;
+					}
+
+					offset_adjust.x = offset.x - x_camera_diff_with_roll;
+					offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+					set_log_offset_adjust(offset_adjust);
+					
+					//set the target with the image target with xyz
+					cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
+					cur_target_xyz.y = offset_adjust.x; 			//add east offset	
+
+
+					target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+					//add limit to current target, the step is 3m
+					if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+					{
+						cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+						cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+					}
+								
+					integration_count_xy = 0;
+
+					cxyz_no_gps.x = 0;
+					cxyz_no_gps.y = 0;
+					
+					cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+					cvel_no_gps.y = _cvel.y;
+					
+				}
+				
+			}
+
+			if(count_time_integration_flag == 1)
+			{
+				time_cnt++;
+			}
+			else if(count_time_integration_flag == 0 && offset_z_2_5_flag == 1)
+			{
+				count_time_integration_flag = 2;
+				if(offset_z1 > offset_z2 && offset_z2 > 0.00001)
+				{
+					cvel_no_gps.z = (offset_z1 - offset_z2) / (DT * time_cnt);
+					printf("cvel_no_gps.z is %f, time_cnt is %d.\n\n\n\n", cvel_no_gps.z, time_cnt);
+				}				
+				
+			}
+
+			DJI_Pro_Get_GroundAcc(&g_acc);
+			
+			//Integ x,y by velocity
+			cxyz_no_gps.x += cvel_no_gps.x * DT;
+			cxyz_no_gps.y += cvel_no_gps.y * DT;
+			cxyz_no_gps.z -= cvel_no_gps.z * DT;
+
+			//Integ velocity by acc
+			cvel_no_gps.x += g_acc.x * DT;
+			cvel_no_gps.y += g_acc.y * DT;
+			cvel_no_gps.z += g_acc.z * DT;
+			//printf("g_acc.z is %f,    cvel_no_gps.z is %f,    _cvel.z is %f\n", g_acc.z, cvel_no_gps.z, _cvel.z);
+
+			integration_count_xy++;
+			integration_count_z++;
+			
+			//limit the time length of using nogps mode, add by zhanglei 0118
+			if(integration_count_xy > 100) // 2 secend reset the integration.
+			{
+				arrive_flag = 1;		// add for get into update the target
+				target_has_updated = 0;
+				integration_count_xy = 0;
+
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
+				
+				cur_target_xyz.x = 0;
+				cur_target_xyz.y = 0;	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
+				
+				target_dist = 0;
+				printf("deliver xy integration time out\n");
+			}	
+			if(integration_count_z > 100) // 2 secend reset the integration.
+			{
+				integration_count_z = 0;	
+				cvel_no_gps.z = _cvel.z;
+
+				printf("deliver z integration time out\n");
+			}	
+				
+			x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
+			y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
+
+			//lower the x y control
+			if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				x_n_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+			else if(x_n_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				x_n_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+
+			if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				y_e_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+			else if(y_e_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+			{
+				y_e_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+			}
+
+			user_ctrl_data.roll_or_x = x_n_vel;
+			user_ctrl_data.pitch_or_y = y_e_vel;
+
+
+			last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
+			
+			if (last_dis_to_mark < (target_dist * 0.25) )
+			{
+				printf("last_dis_to_mark is %f\n", last_dis_to_mark);
+				target_has_updated = 0;
+				integration_count_xy = 100;
+				arrive_flag = 1;
+			}
+			
+			
+		}
+		else
+		{
+			user_ctrl_data.roll_or_x = 0;
+			user_ctrl_data.pitch_or_y = 0;
+		}
+		
+		user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
+
+		//under 5m use image height
+		if ( _cpos.height < 5  && image_height_use_flag ==0 )
+		{
+			
+			if( fabs( _cpos.height - cxyz_no_gps.z) > 3.0)
+			{
+				printf("_cpos.height - cxyz_no_gps.z = %f\n\n\n\n\n", (( _cpos.height - cxyz_no_gps.z)) );
+				//cxyz_no_gps.z = _cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF;
+			}
+			
+			image_height_use_flag = 1;
+		}
+
+		if (image_height_use_flag == 1)
+		{
+			user_ctrl_data.thr_z = _kp_z * (_t_height - cxyz_no_gps.z ); 
+			//printf("cxyz_no_gps.z is %f\n", cxyz_no_gps.z);
+		}
+		//---------------
+		
+		if( user_ctrl_data.thr_z > 0 )
+		{
+			if( user_ctrl_data.thr_z < _min_vel )
+				user_ctrl_data.thr_z = _min_vel;
+
+			if( user_ctrl_data.thr_z > _max_vel )
+				user_ctrl_data.thr_z = _max_vel;
+		}
+		else
+		{
+			if( user_ctrl_data.thr_z > (0 - _min_vel) )
+				user_ctrl_data.thr_z = 0 - _min_vel;
+
+			if( user_ctrl_data.thr_z < (0 - _max_vel) )
+				user_ctrl_data.thr_z = 0 - _max_vel;
+		}
+
+		//printf("last dis: %f\n", (_t_height - _cpos.height));
+		if(fabs(_t_height - cxyz_no_gps.z) < _threshold && image_height_use_flag == 1)
+		{
+			return 1;
+		}
+		
+		DJI_Pro_Attitude_Control(&user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
+		set_no_gps_z_data(cxyz_no_gps.z);
+		usleep(20000);
+	}
+
+
+}
+
+int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z)
+{
+	api_vel_data_t _cvel;
+	api_pos_data_t _cpos;
+	api_quaternion_data_t _cquaternion;
+	attitude_data_t user_ctrl_data;
+	api_pos_data_t _focus_point;
+	float yaw_angle, roll_angle, pitch_angle;
+    float yaw_rard, roll_rard, pitch_rard;
+	Offset offset, offset_adjust;
+	int target_has_updated = 0;
+	float x_camera_diff_with_roll, y_camera_diff_with_pitch;
+	float last_dis_to_mark, last_velocity;
+	Center_xyz cur_target_xyz;
+	Center_xyz cxyz_no_gps;
+	float gps_ctrl_x,gps_ctrl_y, del_ctrl_x_gps, del_ctrl_y_gps;
+	api_common_data_t g_acc;
+	api_vel_data_t cvel_no_gps;
+	int integration_count;
+	double y_e_vel, x_n_vel;
+	double k1d, k1p, k2d, k2p;
+	float target_dist;
+	int arrive_flag = 1;
+	int image_height_use_flag = 0;
+
+	
+	DJI_Pro_Get_Pos(&_focus_point);
+	DJI_Pro_Get_GroundVo(&_cvel);
+
+	user_ctrl_data.ctrl_flag = 0x40;
+	user_ctrl_data.yaw = 0;
+	user_ctrl_data.roll_or_x = 0;
+	user_ctrl_data.pitch_or_y = 0;
+			
+	target_has_updated = 0;
+	integration_count = 0;
+	x_n_vel = y_e_vel = 0;
+
+	cxyz_no_gps.x = 0;
+	cxyz_no_gps.y = 0;
+
+	cur_target_xyz.x = 0;
+	cur_target_xyz.y = 0;	
+	
+	cvel_no_gps.x = _cvel.x;
+	cvel_no_gps.y = _cvel.y;
+
+	target_dist = 0;
+
+	//hover to FP, but lower kp to the FP without image
+	k1d = 0.05;
+	k1p = 0.1;	//simulation test 0113;adjust to 0.05,flight test ok 0114, 01-28 (0.05 to 0.1)
+	k2d = 0.05;
+	k2p = 0.1;	//01-28 (0.05 to 0.1)
+	
+	while(1)
+	{
+		DJI_Pro_Get_Pos(&_cpos);
+		DJI_Pro_Get_GroundVo(&_cvel);
+		DJI_Pro_Get_Quaternion(&_cquaternion);
+
+		roll_rard 	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
+									1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2)		);
+		
+		pitch_rard 	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1)			);
+		
+		yaw_rard 	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
+									1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3)		);
+
+		yaw_angle 	= 180 / PI * yaw_rard;
+		roll_angle 	= 180 / PI * roll_rard;
+		pitch_angle = 180 / PI * pitch_rard;
+
+		if ( 1 )	//delete other condition on 01-27
 		{	
 			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1)
 			{
 				arrive_flag = 0;
+				target_has_updated = 1;
+				
 				offset.x = offset.x / 100;
 				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
-				//add the relative height adjust, 01-24 zhanglei 
+				//adjust with the camera install delta dis
+				offset.x -= CAM_INSTALL_DELTA_X;
+				offset.y -= CAM_INSTALL_DELTA_Y;
+
 				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
 				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
 
@@ -1076,105 +1725,65 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 
 				set_log_offset_adjust(offset_adjust);
 				
-				//trans to get the xyz coordination
-				target_origin_pos = _cpos;
-				
 				//set the target with the image target with xyz
 				cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
 				cur_target_xyz.y = offset_adjust.x; 			//add east offset	
 
+
+				target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
 				//add limit to current target, the step is 3m
-				if (sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2)) > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+				if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
 				{
 					cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
 					cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
 				}
 				
-				target_update = 1;
-
-				/*--ADD NO GPS CONTROL STATE----*/
-				//judge the GPS health data
-				if (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 0)
-				{
-					no_GPS_mode_on = 1;
-					
-					integration_count = 1;//limit the time length of using nogps mode, add by zhanglei 0118
-					
-					cxyz_no_gps.x = 0;
-					cxyz_no_gps.y = 0;
-					
-					cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
-					cvel_no_gps.y = _cvel.y;
-				}
-
 				
-#if DEBUG_PRINT
-				printf("no_GPS_mode_on: %d\n", no_GPS_mode_on);
-				printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y, last_dis_to_mark);
-#endif
+				integration_count = 0;
+
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
+	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
+				
 			}
+
+			DJI_Pro_Get_GroundAcc(&g_acc);
 			
-			//when target get GPS is not good, start the interation process
-			if (no_GPS_mode_on == 1)
+			//Integ x,y by velocity
+			cxyz_no_gps.x += cvel_no_gps.x * DT;
+			cxyz_no_gps.y += cvel_no_gps.y * DT;
+	
+
+			//Integ velocity by acc
+			cvel_no_gps.x += g_acc.x * DT;
+			cvel_no_gps.y += g_acc.y * DT;
+
+			integration_count++;
+			//limit the time length of using nogps mode, add by zhanglei 0118
+			if(integration_count > 100) // 2 secend reset the integration.
 			{
-				DJI_Pro_Get_GroundAcc(&g_acc);
+				arrive_flag = 1;		// add for get into update the target
+				target_has_updated = 0;
+				integration_count = 0;
 
-				//limit the time length of using nogps mode, add by zhanglei 0118
-				if(integration_count >= 100) // 2 secend reset the integration.
-				{
-					no_GPS_mode_on = 0;
-					arrive_flag = 1;	// add for get into update the target
-#if DEBUG_PRINT
-					printf("GPS mode time out\n");
-#endif
-				}
-
-				//Integ x,y by velocity
-				cxyz_no_gps.x += cvel_no_gps.x * DT;
-				cxyz_no_gps.y += cvel_no_gps.y * DT;
-
-				//Integ velocity by acc
-				cvel_no_gps.x += g_acc.x * DT;
-				cvel_no_gps.y += g_acc.y * DT;
-
-				integration_count++;
-#if DEBUG_PRINT
-				printf("Ground acc: (x)%f, (y)%f\n", g_acc.x, g_acc.y);
-#endif
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
 				
-			}
+				cur_target_xyz.x = 0;
+				cur_target_xyz.y = 0;	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
 
-			//hover to FP, but lower kp to the FP without image
-			k1d = 0.05;
-			k1p = 0.1;	//simulation test 0113;adjust to 0.05,flight test ok 0114
-			k2d = 0.05;
-			k2p = 0.1;		
-
-			//use the origin updated last time "target_origin_pos", to get the current cxyz
-			geo2XYZ(_cpos, &cXYZ);
-			XYZ2xyz(target_origin_pos, cXYZ, &cxyz);		
-
-			//use the xyz coordination to get the target, the same as the FP control		
-			x_n_vel = - k1p * (cxyz.x - cur_target_xyz.x) - k1d * (_cvel.x);
-			y_e_vel = - k2p * (cxyz.y - cur_target_xyz.y) - k2d * (_cvel.y);
-
-
-			//when ready to control, judge the GPS, if not good, use the ingteration data as current position
-			if  (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 1)
-			{
-				gps_ctrl_x = x_n_vel;
-				gps_ctrl_y = y_e_vel;
-					
-				x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
-				y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
-
-				//TEST ONLY!!!!!!!
-				del_ctrl_x_gps = x_n_vel - gps_ctrl_x;
-				del_ctrl_y_gps = y_e_vel - gps_ctrl_y;
-#if DEBUG_PRINT
-				printf("[NO GPS]DEL CTRL NO GPS X,Y--->%.8lf.\t%.8lf.\t\n", del_ctrl_x_gps, del_ctrl_y_gps);
-#endif
-			}
+				target_dist = 0;
+				printf("deliver integration time out\n");
+			}	
+				
+			x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
+			y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
 
 			//lower the x y control
 			if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
@@ -1198,29 +1807,18 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			user_ctrl_data.roll_or_x = x_n_vel;
 			user_ctrl_data.pitch_or_y = y_e_vel;
 
-			if  (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 1)
-			{		
-				last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
-				
-				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
-				{
-					target_update = 0;
-					no_GPS_mode_on = 0;
-					arrive_flag = 1;
-				}
-			}
-			else
-			{
-				last_dis_to_mark = sqrt(pow((cxyz.x - cur_target_xyz.x), 2) + pow((cxyz.y - cur_target_xyz.y), 2));
-				
-				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
-				{
-					target_update = 0;
-					no_GPS_mode_on = 0;
-					arrive_flag = 1;
-				}
-			}
 
+			last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
+			
+			if (last_dis_to_mark < (target_dist * 0.5) )
+			{
+				printf("last_dis_to_mark is %f\n", last_dis_to_mark);
+				target_has_updated = 0;
+				integration_count = 100;
+				arrive_flag = 1;
+			}
+			
+			
 		}
 		else
 		{
@@ -1230,7 +1828,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		
 		user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
 
-		
+
 		if( user_ctrl_data.thr_z > 0 )
 		{
 			if( user_ctrl_data.thr_z < _min_vel )
@@ -1255,9 +1853,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		}
 		
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
 		usleep(20000);
 	}
 }
+
 
 int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z)
 {
@@ -1269,32 +1869,52 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 	float yaw_angle, roll_angle, pitch_angle;
     float yaw_rard, roll_rard, pitch_rard;
 	Offset offset, offset_adjust;
-	int target_update = 0;
+	int target_has_updated = 0;
 	float x_camera_diff_with_roll, y_camera_diff_with_pitch;
 	float last_dis_to_mark, last_velocity;
 	Center_xyz cur_target_xyz;
-	int no_GPS_mode_on = 0;
 	Center_xyz cxyz_no_gps;
 	float gps_ctrl_x,gps_ctrl_y, del_ctrl_x_gps, del_ctrl_y_gps;
 	api_common_data_t g_acc;
 	api_vel_data_t cvel_no_gps;
-	int integration_count;
+	int integration_count_xy, integration_count_z;
 	double y_e_vel, x_n_vel;
 	double k1d, k1p, k2d, k2p;
-	XYZ	cXYZ;
-	Center_xyz cxyz;
-	api_pos_data_t target_origin_pos;
+	float target_dist;
+	int arrive_flag = 1;
+	int image_height_use_flag = 0;
 
+	
 	DJI_Pro_Get_Pos(&_focus_point);
+	DJI_Pro_Get_GroundVo(&_cvel);
 
 	user_ctrl_data.ctrl_flag = 0x40;
 	user_ctrl_data.yaw = 0;
 	user_ctrl_data.roll_or_x = 0;
 	user_ctrl_data.pitch_or_y = 0;
 			
-	target_update = 0;
-	DJI_Pro_Get_Pos(&_cpos);
-	target_origin_pos = _cpos;
+	target_has_updated = 0;
+	integration_count_xy = 0;
+	integration_count_z = 0;
+	x_n_vel = y_e_vel = 0;
+
+	cxyz_no_gps.x = 0;
+	cxyz_no_gps.y = 0;
+	cxyz_no_gps.z = _focus_point.height;
+
+	cur_target_xyz.x = 0;
+	cur_target_xyz.y = 0;	
+	
+	cvel_no_gps.x = _cvel.x;
+	cvel_no_gps.y = _cvel.y;
+
+	target_dist = 0;
+
+	//hover to FP, but lower kp to the FP without image
+	k1d = 0.05;
+	k1p = 0.1;	//simulation test 0113;adjust to 0.05,flight test ok 0114
+	k2d = 0.05;
+	k2p = 0.1;	
 	
 	while(1)
 	{
@@ -1314,161 +1934,132 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 		roll_angle 	= 180 / PI * roll_rard;
 		pitch_angle = 180 / PI * pitch_rard;
 
-		if (sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y) < MIN_VEL_TO_GET_IMAGE
-			&& fabs(roll_angle) < MIN_ANGLE_TO_GET_IMAGE
-			&& fabs(pitch_angle) < MIN_ANGLE_TO_GET_IMAGE
-			|| target_update == 1 )
+		if ( 1 )
 		{	
 			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
 			{
-				offset.x = offset.x / 100;
-				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
-				x_camera_diff_with_roll = _cpos.height * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-				y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+				integration_count_z = 0;
 
-				// limit the cam diff
-				// add on 01-23
-				if( x_camera_diff_with_roll > 0 )
-				{				
-					if( x_camera_diff_with_roll > 1 )
-						x_camera_diff_with_roll = 1.0;
-				}
-				else
-				{				
-					if( x_camera_diff_with_roll < (0 - 1) )
-						x_camera_diff_with_roll = 0 - 1.0;
-				}
-
-
-				if( y_camera_diff_with_pitch > 0 )
-				{				
-					if( y_camera_diff_with_pitch > 1 )
-						y_camera_diff_with_pitch = 1.0;
-				}
-				else
-				{				
-					if( y_camera_diff_with_pitch < (0 - 1) )
-						y_camera_diff_with_pitch = 0 - 1.0;
-				}
-
-				offset_adjust.x = offset.x - x_camera_diff_with_roll;
-				offset_adjust.y = offset.y - y_camera_diff_with_pitch;
-
-				set_log_offset_adjust(offset_adjust);
-
-				//check if close enough to the image target
-				/* delete by zhanglei 0123
-				if(sqrt(pow(offset_adjust.y, 2) + pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK)
-				{
-					last_velocity = sqrt(_cvel.x * _cvel.x + _cvel.y * _cvel.y);
+				cvel_no_gps.z = _cvel.z;
+				cxyz_no_gps.z = offset.z;
+				
+				if( arrive_flag == 1 )
+				{	
+					arrive_flag = 0;
+					target_has_updated = 1;
 					
-					if(last_velocity < HOVER_VELOCITY_MIN)
-					{
-						cur_target_xyz.x = 0;
-						cur_target_xyz.y = 0;
-						cur_target_xyz.z = 0;
+					offset.x = offset.x / 100;
+					offset.y = offset.y / 100;
+					
+					//adjust with the camera install delta dis
+					offset.x -= CAM_INSTALL_DELTA_X;
+					offset.y -= CAM_INSTALL_DELTA_Y;
+
+					x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+					y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+
+					// limit the cam diff
+					// add on 01-23
+					if( x_camera_diff_with_roll > 0 )
+					{				
+						if( x_camera_diff_with_roll > 1 )
+							x_camera_diff_with_roll = 1.0;
 					}
-				}
-				*/
-				
-				//trans to get the xyz coordination
-				target_origin_pos = _cpos;
-				
-				//set the target with the image target with xyz
-				cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
-				cur_target_xyz.y = offset_adjust.x; 			//add east offset	
+					else
+					{				
+						if( x_camera_diff_with_roll < (0 - 1) )
+							x_camera_diff_with_roll = 0 - 1.0;
+					}
 
-				//add limit to current target, the step is 3m
-				if (sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2)) > MAX_EACH_DIS_IMAGE_GET_CLOSE)
-				{
-					cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
-					cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
-				}
-				
-				target_update = 1;
 
-				/*--ADD NO GPS CONTROL STATE----*/
-				//judge the GPS health data
-				if (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 0)
-				{
-					no_GPS_mode_on = 1;
+					if( y_camera_diff_with_pitch > 0 )
+					{				
+						if( y_camera_diff_with_pitch > 1 )
+							y_camera_diff_with_pitch = 1.0;
+					}
+					else
+					{				
+						if( y_camera_diff_with_pitch < (0 - 1) )
+							y_camera_diff_with_pitch = 0 - 1.0;
+					}
+
+					offset_adjust.x = offset.x - x_camera_diff_with_roll;
+					offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+					set_log_offset_adjust(offset_adjust);
 					
-					integration_count = 1;//limit the time length of using nogps mode, add by zhanglei 0118
-					
+					//set the target with the image target with xyz
+					cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
+					cur_target_xyz.y = offset_adjust.x; 			//add east offset	
+
+
+					target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+					//add limit to current target, the step is 3m
+					if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+					{
+						cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+						cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+					}
+								
+					integration_count_xy = 0;
+
 					cxyz_no_gps.x = 0;
 					cxyz_no_gps.y = 0;
 					
 					cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
 					cvel_no_gps.y = _cvel.y;
+					
 				}
-#if DEBUG_PRINT
-				printf("no_GPS_mode_on: %d\n", no_GPS_mode_on);
-				printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
-#endif
-			}
-			
-			//when target get GPS is not good, start the interation process
-			if (no_GPS_mode_on == 1)
-			{
-				DJI_Pro_Get_GroundAcc(&g_acc);
-
-				//limit the time length of using nogps mode, add by zhanglei 0118
-				if(integration_count >= 100) // 2 secend reset the integration.
-				{
-					no_GPS_mode_on = 0;
-#if DEBUG_PRINT
-					printf("GPS mode time out\n");
-#endif
-				}
-
-				//Integ x,y by velocity
-				cxyz_no_gps.x += cvel_no_gps.x * DT;
-				cxyz_no_gps.y += cvel_no_gps.y * DT;
-
-				//Integ velocity by acc
-				cvel_no_gps.x += g_acc.x * DT;
-				cvel_no_gps.y += g_acc.y * DT;
-
-				integration_count++;
-#if DEBUG_PRINT
-				printf("Ground acc: (x)%f, (y)%f\n", g_acc.x, g_acc.y);
-#endif
 				
 			}
 
-			//hover to FP, but lower kp to the FP without image
-			k1d = 0.05;
-			k1p = 0.05;	//simulation test 0113;adjust to 0.05,flight test ok 0114
-			k2d = 0.05;
-			k2p = 0.05;		
+			DJI_Pro_Get_GroundAcc(&g_acc);
+			
+			//Integ x,y by velocity
+			cxyz_no_gps.x += cvel_no_gps.x * DT;
+			cxyz_no_gps.y += cvel_no_gps.y * DT;
+			cxyz_no_gps.z -= cvel_no_gps.z * DT;
 
-			//use the origin updated last time "target_origin_pos", to get the current cxyz
-			geo2XYZ(_cpos, &cXYZ);
-			XYZ2xyz(target_origin_pos, cXYZ, &cxyz);		
+			//Integ velocity by acc
+			cvel_no_gps.x += g_acc.x * DT;
+			cvel_no_gps.y += g_acc.y * DT;
+			cvel_no_gps.z += g_acc.z * DT;
+			//printf("g_acc.z is %f,    cvel_no_gps.z is %f,    _cvel.z is %f\n", g_acc.z, cvel_no_gps.z, _cvel.z);
 
-			//use the xyz coordination to get the target, the same as the FP control		
-			x_n_vel = - k1p * (cxyz.x - cur_target_xyz.x) - k1d * (_cvel.x);
-			y_e_vel = - k2p * (cxyz.y - cur_target_xyz.y) - k2d * (_cvel.y);
-
-
-			//when ready to control, judge the GPS, if not good, use the ingteration data as current position
-			if  (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 1)
+			integration_count_xy++;
+			integration_count_z++;
+			
+			//limit the time length of using nogps mode, add by zhanglei 0118
+			if(integration_count_xy > 100) // 2 secend reset the integration.
 			{
-				gps_ctrl_x = x_n_vel;
-				gps_ctrl_y = y_e_vel;
-					
-				x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
-				y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
+				arrive_flag = 1;		// add for get into update the target
+				target_has_updated = 0;
+				integration_count_xy = 0;
 
-				//TEST ONLY!!!!!!!
-				del_ctrl_x_gps = x_n_vel - gps_ctrl_x;
-				del_ctrl_y_gps = y_e_vel - gps_ctrl_y;
-#if DEBUG_PRINT
-				printf("[NO GPS]DEL CTRL NO GPS X,Y--->%.8lf.\t%.8lf.\t\n", del_ctrl_x_gps, del_ctrl_y_gps);
-#endif
-			}
+				cxyz_no_gps.x = 0;
+				cxyz_no_gps.y = 0;
+				
+				cur_target_xyz.x = 0;
+				cur_target_xyz.y = 0;	
+				
+				cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+				cvel_no_gps.y = _cvel.y;
+				
+				target_dist = 0;
+				printf("deliver xy integration time out\n");
+			}	
+			if(integration_count_z > 100) // 2 secend reset the integration.
+			{
+				integration_count_z = 0;	
+				cvel_no_gps.z = _cvel.z;
+
+				printf("deliver z integration time out\n");
+			}	
+				
+			x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
+			y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
 
 			//lower the x y control
 			if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
@@ -1492,26 +2083,18 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 			user_ctrl_data.roll_or_x = x_n_vel;
 			user_ctrl_data.pitch_or_y = y_e_vel;
 
-			if  (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 1)
-			{		
-				last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
-				
-				if (last_dis_to_mark < HOVER_POINT_RANGE)
-				{
-					target_update = 0;
-					no_GPS_mode_on = 0;
-				}
-			}
-			else
+
+			last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
+			
+			if (last_dis_to_mark < (target_dist * 0.25) )
 			{
-				last_dis_to_mark = sqrt(pow((cxyz.x - cur_target_xyz.x), 2) + pow((cxyz.y - cur_target_xyz.y), 2));
-				
-				if (last_dis_to_mark < HOVER_POINT_RANGE)
-				{
-					target_update = 0;
-					no_GPS_mode_on = 0;
-				}
+				printf("last_dis_to_mark is %f\n", last_dis_to_mark);
+				target_has_updated = 0;
+				integration_count_xy = 100;
+				arrive_flag = 1;
 			}
+			
+			
 		}
 		else
 		{
@@ -1521,6 +2104,23 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 		
 		user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
 
+		//under 5m use image height
+		if ( _cpos.height < 5  && image_height_use_flag ==0 )
+		{
+			if( fabs( _cpos.height - cxyz_no_gps.z) > 3.0)
+			{
+				printf("_cpos.height - cxyz_no_gps.z = %f\n\n\n\n\n", (( _cpos.height - cxyz_no_gps.z)) );
+				//cxyz_no_gps.z = _cpos.height;
+			}
+			image_height_use_flag = 1;
+		}
+
+		if (image_height_use_flag == 1)
+		{
+			user_ctrl_data.thr_z = _kp_z * (_t_height - cxyz_no_gps.z ); 
+			//printf("cxyz_no_gps.z is %f\n", cxyz_no_gps.z);
+		}
+		//---------------
 		
 		if( user_ctrl_data.thr_z > 0 )
 		{
@@ -1540,16 +2140,19 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 		}
 
 		//printf("last dis: %f\n", (_t_height - _cpos.height));
-		if(fabs(_t_height - _cpos.height) < _threshold)
+		if(fabs(_t_height - cxyz_no_gps.z) < _threshold && image_height_use_flag == 1)
 		{
 			return 1;
 		}
 		
 		DJI_Pro_Attitude_Control(&user_ctrl_data);
+		set_ctrl_data(user_ctrl_data);
+		set_no_gps_z_data(cxyz_no_gps.z);
 		usleep(20000);
 	}
-}
 
+	
+}
 
 
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
@@ -1607,7 +2210,7 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 		//Integ x,y by velocity
 		cxyz_no_gps.x += cvel_no_gps.x * DT;
 		cxyz_no_gps.y += cvel_no_gps.y * DT;
-		cxyz_no_gps.z += cvel_no_gps.z * DT;
+		cxyz_no_gps.z += cvel_no_gps.z * DT; // 01-25 zhouzibo modify to +=
 		
 		//Integ velocity by acc
 		cvel_no_gps.x += g_acc.x * DT;
@@ -1630,9 +2233,6 @@ int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void)
 	
 	return 1;
 }
-
-
-
 
 
 

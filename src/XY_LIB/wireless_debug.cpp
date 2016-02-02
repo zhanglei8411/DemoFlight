@@ -41,7 +41,7 @@ int XY_Debug_Sprintf(int seq, char *fmt, ...)
 {
 	va_list args;
 	int r;
-
+	
 	if( ((r = XY_Get_Debug_Flag()) & (1<<seq)) != 0  || seq == NULL)
 	{
 		seq = sdk_find_available_msg( strlen((const char *)fmt), r); 
@@ -90,7 +90,6 @@ int XY_Debug_Send_At_Once(char *fmt, ...)
 int XY_Debug_Setup(void)
 {
 	int wireless_baudrate = 9600;
-
 	return sdk_wireless_debug_setup(DEBUG_DEV_NAME, wireless_baudrate);
 }
 

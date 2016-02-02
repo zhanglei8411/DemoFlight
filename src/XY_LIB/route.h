@@ -18,22 +18,22 @@
 #include "control_steer.h"
 
 
-#define DELIVER_MAX_VEL_UP_TO_H2								(1.0)	//m/s
-#define DELIVER_MAX_VEL_UP_TO_H3								(1.5)
-#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.5)
+#define DELIVER_MAX_VEL_UP_TO_H2								(1.25)	//m/s
+#define DELIVER_MAX_VEL_UP_TO_H3								(1.75)
+#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.75)
 #define DELIVER_MAX_VEL_DOWN_TO_H2								(0.35)
 #define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)
 
-#define GOBACK_MAX_VEL_UP_TO_H2									DELIVER_MAX_VEL_UP_TO_H2
+#define GOBACK_MAX_VEL_UP_TO_H2									(1.0)
 #define GOBACK_MAX_VEL_UP_TO_H3									DELIVER_MAX_VEL_UP_TO_H3
 #define GOBACK_MAX_VEL_DOWN_TO_H1								DELIVER_MAX_VEL_DOWN_TO_H1
 #define GOBACK_MAX_VEL_DOWN_TO_H2								DELIVER_MAX_VEL_DOWN_TO_H2
 #define GOBACK_MAX_VEL_DOWN_TO_H3								DELIVER_MAX_VEL_DOWN_TO_H3
 
-#define DELIVER_MIN_VEL_UP_TO_H2								(0.8)	//m/s
+#define DELIVER_MIN_VEL_UP_TO_H2								(1.0)	//m/s
 #define DELIVER_MIN_VEL_UP_TO_H3								(1.0)
 #define DELIVER_MIN_VEL_DOWN_TO_H1								(0.4)
-#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.2)
+#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.35)	//01-27 (0.2 to 0.35)
 #define DELIVER_MIN_VEL_DOWN_TO_H3								(0.2)
 
 #define GOBACK_MIN_VEL_UP_TO_H2									DELIVER_MIN_VEL_UP_TO_H2
@@ -51,14 +51,14 @@
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)
 #define DELIVER_HEIGHT_OF_DOWNH1									(25.0 	- DIFF_HEIGHT_WHEN_TAKEOFF)
-#define DELIVER_HEIGHT_OF_DOWNH2									(0.5 	- DIFF_HEIGHT_WHEN_TAKEOFF)	// 01-23 (0.8 to 0.5)
-#define DELIVER_HEIGHT_OF_DOWNH3									(0.5 	- DIFF_HEIGHT_WHEN_TAKEOFF)
+#define DELIVER_HEIGHT_OF_DOWNH2									(0.5)	// 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
+#define DELIVER_HEIGHT_OF_DOWNH3									(0.5)
 
 #define GOBACK_HEIGHT_OF_UPH2										(10.0	- DIFF_HEIGHT_WHEN_TAKEOFF)
 #define GOBACK_HEIGHT_OF_UPH3										(35.0)
 #define GOBACK_HEIGHT_OF_DOWNH1										(25.0)
-#define GOBACK_HEIGHT_OF_DOWNH2										(1.5)
-#define GOBACK_HEIGHT_OF_DOWNH3										(1)
+#define GOBACK_HEIGHT_OF_DOWNH2										(0.3)	// 01-27 (1.5 to 0.3)
+#define GOBACK_HEIGHT_OF_DOWNH3										(0.3)	// 01-27 delete the process of down to h3 
 
 
 #define DELIVER_THRESHOLD_OF_UP_TO_H2_OUT						(1.0)		
@@ -218,7 +218,9 @@ static void *drone_deliver_down_thread_func(void * arg);
 int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);
 int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void);
+int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
+int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
 int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void);
 

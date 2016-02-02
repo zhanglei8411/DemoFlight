@@ -1,14 +1,14 @@
 TARGET = ../output/xunyi-controlled-exe
 
 
-OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o fisheye.o getTargetLoc.o inifile.o image_identify.o thread_common_op.o status_led.o network_chat_3g.o sd_store_log.o
+OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o fisheye.o getTargetLoc.o inifile.o image_identify.o thread_common_op.o status_led.o sd_store_log.o http_chat_3g.o cJSON.o
 
 CFLAGS = -Wall -O3 -DPLATFORM_LINUX -DTINYXML_CFG -Isrc/ -I/src/DJI_LIB -I/src/XY_LIB -I/src/XY_LIB/common -I/usr/local/include/opencv -I/usr/local/include
 
 LDFLAGS = -lpthread -lm /usr/local/lib/libopencv_calib3d.so /usr/local/lib/libopencv_contrib.so /usr/local/lib/libopencv_core.so /usr/local/lib/libopencv_features2d.so /usr/local/lib/libopencv_flann.so /usr/local/lib/libopencv_gpu.so /usr/local/lib/libopencv_highgui.so /usr/local/lib/libopencv_imgproc.so /usr/local/lib/libopencv_legacy.so /usr/local/lib/libopencv_ml.so /usr/local/lib/libopencv_nonfree.so /usr/local/lib/libopencv_objdetect.so /usr/local/lib/libopencv_ocl.so /usr/local/lib/libopencv_photo.so /usr/local/lib/libopencv_stitching.so /usr/local/lib/libopencv_superres.so /usr/local/lib/libopencv_ts.a /usr/local/lib/libopencv_video.so /usr/local/lib/libopencv_videostab.so -lrt -ldl 
 
 
-CXX = g++ -pg -g
+CXX = g++ -pg -g -rdynamic
 
 $(TARGET) : $(OBJECTS)
 	$(CXX) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
@@ -73,8 +73,11 @@ thread_common_op.o : ../src/XY_LIB/thread_common_op.cpp
 status_led.o : ../src/XY_LIB/status_led.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/status_led.cpp
 	
-network_chat_3g.o : ../src/XY_LIB/network_chat_3g.cpp
-	$(CXX) $(CFLAGS) -c ../src/XY_LIB/network_chat_3g.cpp
+http_chat_3g.o : ../src/XY_LIB/http_chat_3g.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/http_chat_3g.cpp
+
+cJSON.o : ../src/XY_LIB/cJSON.c
+	gcc $(CFLAGS) -c ../src/XY_LIB/cJSON.c
 	
 sd_store_log.o : ../src/XY_LIB/sd_store_log.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/sd_store_log.cpp

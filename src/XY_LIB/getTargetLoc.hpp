@@ -109,6 +109,7 @@ private:
 	bool contourDetect(Mat& bi, vector<Point> & tarContour);
 	void runOneFrame();
 	void runOneFrame_gpu();
+	double computeRotatedRect(const vector<Point>& contour, cv::Size sz, RotatedRect box, Mat& bi);
 };
 
 }

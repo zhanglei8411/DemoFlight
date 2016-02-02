@@ -18,7 +18,7 @@
 #include "wireless_debug.h"
 
 
-#define KS103_SLAVE_ADDRESS		0xD0
+#define KS103_SLAVE_ADDRESS		0xE8		//0xD0
 #define KS103_REGISTER2_ADDRESS	0x02
 #define KS103_DEFAULT_CMD		0xBC
 

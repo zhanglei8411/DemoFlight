@@ -125,20 +125,21 @@ void wait_capture_on(void)
 	sem_wait(&capture_start_sem);
 }
 
-
 int XY_Start_Capture(void)
 {
+	clear_sample_states();
 	set_capture_on_flag(1);
 	sem_post(&capture_start_sem);
-
+	
 	return 0;
 }
+
 
 int XY_Stop_Capture(void)
 {
 	Offset _offset;
 	set_capture_on_flag(0);
-	clear_sample_states();
+	//clear_sample_states();
 	XY_Get_Offset_Data(&_offset, OFFSET_GET_ID_A);
 	return 0;
 }
@@ -223,9 +224,14 @@ static void *capture_thread_func(void * arg)
 
 	int time_ = 0;
 	int reopen_cnt = 0;
+	int cache_cnt = 0;
 	//xyVision::GetTarget sample("config.ini");
+
+	//reopen has no effect
+
 _reopen:
 	cv::VideoCapture cap(0);
+	//or cv::VideoCapture cap(200);
 	if(!cap.isOpened())
 	{
 		printf("Cap not open\n");
@@ -270,6 +276,11 @@ _reopen:
 		else
 		{
 			wait_capture_on();
+			for(cache_cnt = 0; cache_cnt<5; cache_cnt++)
+			{
+				cap >> img;
+				usleep(30000);
+			}
 		}
 	}
 _exit:

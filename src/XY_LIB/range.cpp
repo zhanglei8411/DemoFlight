@@ -545,7 +545,7 @@ static void *KS103_Thread_Func(void * arg)
 		}
 		i = 0;
 		ret = read(ks103_fd, rbuf, depth);
-	
+		
 		set_ultra_data( KS103_Cal_Detect_Result(rbuf, wbuf[2]) );
 		//printf("ultra is: %f.\n", get_ultra_data());
 		//tell_external_ultra_is_available();

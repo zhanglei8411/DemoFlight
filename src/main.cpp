@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/sysinfo.h>
 #include <sched.h>
+#include <execinfo.h>
 #include "DJI_Pro_Sample.h"
 #include "XY_LIB/wireless_debug.h"
 #include "XY_LIB/route.h"
@@ -46,6 +47,32 @@ void handle_signal(int signum)
 			break;
 	}
 }
+
+void handle_crash(int signum)
+{
+	void *array[30] = {0};
+	size_t size;  
+	char **strings = NULL;  
+	size_t i;
+	
+	size = backtrace(array, 30);
+	printf("Obtained %zd stack frames.\n", size);  
+	strings = backtrace_symbols(array, size);  
+	if (NULL == strings)  
+	{  
+		perror("backtrace_synbols");  
+		exit(EXIT_FAILURE);  
+	}  
+	
+	for (i = 0; i < size; i++)  
+		printf("%s\n", strings[i]);  
+
+	free(strings);  
+	strings = NULL; 
+	exit(0);
+}
+
+
 
 /* this function should be called by main first */
 int setup_main_process_scheduler(int _policy, int _priority)
@@ -99,6 +126,7 @@ int process_binding_cpu(int cpu_seq)
 	
 }
 
+
 int main(int argc,char **argv)
 {
 	activate_data_t user_act_data; 
@@ -107,6 +135,7 @@ int main(int argc,char **argv)
 	pthread_t express_thread_id;
 	int i = 0;
 	int wait_time = 0;
+	
 
 	printf("\nXunyi Drone Test,Ver 1.1.0\n\n");
 
@@ -114,14 +143,14 @@ int main(int argc,char **argv)
 	//process_binding_cpu(GENERAL_JOB_CPU);							
 	
 	signal(SIGINT, handle_signal);
-
+	signal(SIGSEGV, handle_crash);
+	
 	if(XY_Debug_Setup() < 0)
 	{
 		printf("Debug Function Open ERROR...\n");
 	}
 	printf("Debug Function Open SUCCESS...\n");
 	XY_Debug_Send_At_Once("Debug Function Open SUCCESS.\n");
-
 
   	if(XY_Status_Led_Setup() < 0)
 	{
@@ -138,8 +167,25 @@ int main(int argc,char **argv)
 		printf("Capture function Open ERROR...\n");
 		XY_Debug_Send_At_Once("Capture function Open ERROR.\n");
 	}
+	printf("Capture function Open SUCCESS...\n");
+	XY_Debug_Send_At_Once("Capture function Open SUCCESS.\n");
 
-	
+#if 0
+	printf("start capture\n");
+	XY_Start_Capture();
+	sleep(5);
+	printf("stop capture\n");
+	XY_Stop_Capture();
+	sleep(5);
+	printf("start capture\n");
+	XY_Start_Capture();
+	sleep(5);
+	while(1)
+	{
+		sleep(5);
+	}
+#endif
+
 #if 1
 _relink:
 	if(XY_Http_Chat_Setup() < 0)
@@ -191,7 +237,7 @@ _relink:
 	{
 		wait_time = atoi(argv[1]);
 
-		wait_time = wait_time<10 ? 10 : wait_time;
+		wait_time = wait_time<5 ? 5 : wait_time;
 		wait_time = wait_time>90 ? 90 : wait_time;
 			
 		printf("Please wait %ds\n", wait_time);
