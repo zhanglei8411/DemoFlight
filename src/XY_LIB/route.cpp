@@ -1274,7 +1274,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	int arrive_flag = 1;
 	int ultra_height_use_flag = 0;
 	float ultra_z1, ultra_z2;
-	int count_time_integration_flag;
+	int count_time_integration_flag = 0;
 	int ultra_z_2_5_flag = 0, ultra_z_3_0_flag = 0;
 	int time_cnt = 0;
 	int return_timeout = 0;
@@ -1964,7 +1964,12 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 	double k1d, k1p, k2d, k2p;
 	float target_dist;
 	int arrive_flag = 1;
-	int image_height_use_flag = 0;
+	int ultra_height_use_flag = 0;
+	float ultra_z1, ultra_z2;
+	float ultra_height=0;
+	int ultra_z_2_5_flag = 0, ultra_z_3_0_flag = 0;
+	int count_time_integration_flag = 0;
+	int time_cnt = 0;
 
 	
 	DJI_Pro_Get_Pos(&_focus_point);
