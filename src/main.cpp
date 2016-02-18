@@ -166,6 +166,7 @@ int main(int argc,char **argv)
 		printf("Capture function Open ERROR...\n");
 		XY_Debug_Send_At_Once("Capture function Open ERROR.\n");
 	}
+<<<<<<< HEAD
 	printf("Capture function Open SUCCESS...\n");
 	XY_Debug_Send_At_Once("Capture function Open SUCCESS.\n");
 
@@ -185,6 +186,10 @@ int main(int argc,char **argv)
 	}
 #endif
 
+=======
+
+	
+>>>>>>> origin/master
 #if 1
 _relink:
 	if(XY_Http_Chat_Setup() < 0)

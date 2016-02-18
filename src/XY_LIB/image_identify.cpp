@@ -224,11 +224,15 @@ static void *capture_thread_func(void * arg)
 
 	int time_ = 0;
 	int reopen_cnt = 0;
+<<<<<<< HEAD
 	int cache_cnt = 0;
 	//xyVision::GetTarget sample("config.ini");
 
 	//reopen has no effect
 
+=======
+	//xyVision::GetTarget sample("config.ini");
+>>>>>>> origin/master
 _reopen:
 	cv::VideoCapture cap(0);
 	//or cv::VideoCapture cap(200);

@@ -5,7 +5,11 @@
 #include "wireless_debug.h"
 #include "control_law.h"
 #include "http_chat_3g.h"
+<<<<<<< HEAD
 #include "range.h"
+=======
+
+>>>>>>> origin/master
 #define DEBUG_PRINT	1
 
 Leg_Node *deliver_route_head = NULL;
@@ -998,9 +1002,16 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
 	int integration_count;
 	double y_e_vel, x_n_vel;
 	double k1d, k1p, k2d, k2p;
+<<<<<<< HEAD
 	float target_dist;
 	int arrive_flag = 1;
 	int image_height_use_flag = 0;
+=======
+	XYZ	cXYZ;
+	Center_xyz cxyz;
+	api_pos_data_t target_origin_pos;
+	int arrive_flag = 1;
+>>>>>>> origin/master
 
 	
 	DJI_Pro_Get_Pos(&_focus_point);
@@ -1055,18 +1066,27 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
 			if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1)
 			{
 				arrive_flag = 0;
+<<<<<<< HEAD
 				target_has_updated = 1;
 				
+=======
+>>>>>>> origin/master
 				offset.x = offset.x / 100;
 				offset.y = offset.y / 100;
 				offset.z = offset.z / 100;
 
+<<<<<<< HEAD
 				//adjust with the camera install delta dis
 				offset.x -= CAM_INSTALL_DELTA_X;
 				offset.y -= CAM_INSTALL_DELTA_Y;
 
 				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
 				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
+=======
+				//add the relative height adjust, 01-24 zhanglei 
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+>>>>>>> origin/master
 
 				// limit the cam diff
 				// add on 01-23
@@ -1111,8 +1131,57 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
 					cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
 				}
 				
+<<<<<<< HEAD
 				
 				integration_count = 0;
+=======
+				target_update = 1;
+
+				/*--ADD NO GPS CONTROL STATE----*/
+				//judge the GPS health data
+				if (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 0)
+				{
+					no_GPS_mode_on = 1;
+					
+					integration_count = 1;//limit the time length of using nogps mode, add by zhanglei 0118
+					
+					cxyz_no_gps.x = 0;
+					cxyz_no_gps.y = 0;
+					
+					cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+					cvel_no_gps.y = _cvel.y;
+				}
+
+				
+#if DEBUG_PRINT
+				printf("no_GPS_mode_on: %d\n", no_GPS_mode_on);
+				printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n",cur_target_xyz.x,cur_target_xyz.y, last_dis_to_mark);
+#endif
+			}
+			
+			//when target get GPS is not good, start the interation process
+			if (no_GPS_mode_on == 1)
+			{
+				DJI_Pro_Get_GroundAcc(&g_acc);
+
+				//limit the time length of using nogps mode, add by zhanglei 0118
+				if(integration_count >= 100) // 2 secend reset the integration.
+				{
+					no_GPS_mode_on = 0;
+					arrive_flag = 1;	// add for get into update the target
+#if DEBUG_PRINT
+					printf("GPS mode time out\n");
+#endif
+				}
+
+				//Integ x,y by velocity
+				cxyz_no_gps.x += cvel_no_gps.x * DT;
+				cxyz_no_gps.y += cvel_no_gps.y * DT;
+
+				//Integ velocity by acc
+				cvel_no_gps.x += g_acc.x * DT;
+				cvel_no_gps.y += g_acc.y * DT;
+>>>>>>> origin/master
 
 				cxyz_no_gps.x = 0;
 				cxyz_no_gps.y = 0;
@@ -1181,6 +1250,7 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
 			user_ctrl_data.roll_or_x = x_n_vel;
 			user_ctrl_data.pitch_or_y = y_e_vel;
 
+<<<<<<< HEAD
 
 			last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
 			
@@ -1193,6 +1263,31 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
 			}
 			
 			
+=======
+			if  (_cpos.health_flag < GPS_HEALTH_GOOD && no_GPS_mode_on == 1)
+			{		
+				last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
+				
+				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
+				{
+					target_update = 0;
+					no_GPS_mode_on = 0;
+					arrive_flag = 1;
+				}
+			}
+			else
+			{
+				last_dis_to_mark = sqrt(pow((cxyz.x - cur_target_xyz.x), 2) + pow((cxyz.y - cur_target_xyz.y), 2));
+				
+				if (last_dis_to_mark < 5 * HOVER_POINT_RANGE)
+				{
+					target_update = 0;
+					no_GPS_mode_on = 0;
+					arrive_flag = 1;
+				}
+			}
+
+>>>>>>> origin/master
 		}
 		else
 		{
@@ -1346,12 +1441,42 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					printf("return_timeout is %d\n", return_timeout);
 				}
 
+<<<<<<< HEAD
 				if(return_timeout >= (12.5/0.02))
 				{
 					printf("deliver down to h2 timeout return\n");
 					return 1;
 				}
 			}
+=======
+				x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+				y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+
+				// limit the cam diff
+				// add on 01-23
+				if( x_camera_diff_with_roll > 0 )
+				{				
+					if( x_camera_diff_with_roll > 1 )
+						x_camera_diff_with_roll = 1.0;
+				}
+				else
+				{				
+					if( x_camera_diff_with_roll < (0 - 1) )
+						x_camera_diff_with_roll = 0 - 1.0;
+				}
+
+
+				if( y_camera_diff_with_pitch > 0 )
+				{				
+					if( y_camera_diff_with_pitch > 1 )
+						y_camera_diff_with_pitch = 1.0;
+				}
+				else
+				{				
+					if( y_camera_diff_with_pitch < (0 - 1) )
+						y_camera_diff_with_pitch = 0 - 1.0;
+				}
+>>>>>>> origin/master
 
                     if(XY_Get_Ultra_Data(&ultra_height, ULTRA_GET_ID_B) == 0)
                     {
@@ -2385,7 +2510,7 @@ int temporary_init_deliver_route_list(void)
 	//…Ë÷√÷’µ„Œª÷√, not finish	
 	//set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
 
-#if 0
+#if 1
 	set_leg_end_pos(&task_info, XYI_TERRACE_LONGTI, XYI_TERRACE_LATI, XYI_TERRACE_ALTI);
 #else
 	  set_leg_end_pos(&task_info, 2.094421805, 0.528476281, ORIGIN_IN_HENGSHENG_ALTI);
