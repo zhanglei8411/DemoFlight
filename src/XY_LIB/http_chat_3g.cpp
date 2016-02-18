@@ -440,14 +440,10 @@ static void *wait_order_thread_func(void * arg)
 				printf("some thing read error!\n");		
 				XY_Debug_Send_At_Once("some thing read error!\n");
 				if( create_link_in_http() < 0 )
-<<<<<<< HEAD
 				{
 					printf("create link in http error.\n");
 					goto _exit;
 				}
-=======
-					goto _exit;
->>>>>>> origin/master
 
 			case 0:		// ³¬Ê±
 				printf("request time out!\n");
@@ -471,14 +467,10 @@ static void *wait_order_thread_func(void * arg)
 					printf("Network errors, stop!\n"); 
 					XY_Debug_Send_At_Once("Network errors, stop!\n");
 					if( create_link_in_http() < 0 )
-<<<<<<< HEAD
 					{
 						printf("create link in http error.\n");
 						goto _exit;
 					}
-=======
-						goto _exit;
->>>>>>> origin/master
 					
 				}
 
@@ -489,7 +481,6 @@ static void *wait_order_thread_func(void * arg)
 		}
 		if( strstr(recv_buf, "Connection: close") )
 		{
-<<<<<<< HEAD
 			printf("Connection: close\n");
 			close(sock_fd); 
 			if( create_link_in_http() < 0 )
@@ -497,10 +488,6 @@ static void *wait_order_thread_func(void * arg)
 				printf("create link in http error.\n");
 				goto _exit;
 			}
-=======
-			printf("invalid order\n");
-			goto pre_again;
->>>>>>> origin/master
 		}
 		length = strstr(recv_buf, "}") - strstr(recv_buf, "{") + 1;
 		if(length == 2)

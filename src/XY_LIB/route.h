@@ -19,15 +19,9 @@
 #include "control_steer.h"
 
 
-<<<<<<< HEAD
 #define DELIVER_MAX_VEL_UP_TO_H2								(1.25)	//m/s
 #define DELIVER_MAX_VEL_UP_TO_H3								(1.75)
 #define DELIVER_MAX_VEL_DOWN_TO_H1								(1.75)
-=======
-#define DELIVER_MAX_VEL_UP_TO_H2								(1.0)	//m/s
-#define DELIVER_MAX_VEL_UP_TO_H3								(1.5)
-#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.5)
->>>>>>> origin/master
 #define DELIVER_MAX_VEL_DOWN_TO_H2								(0.35)
 #define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)
 
@@ -37,11 +31,7 @@
 #define GOBACK_MAX_VEL_DOWN_TO_H2								DELIVER_MAX_VEL_DOWN_TO_H2
 #define GOBACK_MAX_VEL_DOWN_TO_H3								DELIVER_MAX_VEL_DOWN_TO_H3
 
-<<<<<<< HEAD
 #define DELIVER_MIN_VEL_UP_TO_H2								(1.0)	//m/s
-=======
-#define DELIVER_MIN_VEL_UP_TO_H2								(0.8)	//m/s
->>>>>>> origin/master
 #define DELIVER_MIN_VEL_UP_TO_H3								(1.0)
 #define DELIVER_MIN_VEL_DOWN_TO_H1								(0.4)
 #define DELIVER_MIN_VEL_DOWN_TO_H2								(0.35)	//01-27 (0.2 to 0.35)
@@ -57,18 +47,13 @@
 
 #define DIFF_HEIGHT_OF_MANUAL_PACK								(0.1)	
 #define DIFF_HEIGHT_OF_AUTO_PACK								(0.52)
-#define DIFF_HEIGHT_WHEN_TAKEOFF								(1)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
+#define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
 
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)
 #define DELIVER_HEIGHT_OF_DOWNH1									(25.0 	- DIFF_HEIGHT_WHEN_TAKEOFF)
-<<<<<<< HEAD
 #define DELIVER_HEIGHT_OF_DOWNH2									(0.25)	//0218 (0.5 to 0.25); 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
 #define DELIVER_HEIGHT_OF_DOWNH3									(0.5)
-=======
-#define DELIVER_HEIGHT_OF_DOWNH2									(0.5 	- DIFF_HEIGHT_WHEN_TAKEOFF)	// 01-23 (0.8 to 0.5)
-#define DELIVER_HEIGHT_OF_DOWNH3									(0.5 	- DIFF_HEIGHT_WHEN_TAKEOFF)
->>>>>>> origin/master
 
 #define GOBACK_HEIGHT_OF_UPH2										(10.0	- DIFF_HEIGHT_WHEN_TAKEOFF)
 #define GOBACK_HEIGHT_OF_UPH3										(35.0)

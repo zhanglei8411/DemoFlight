@@ -112,17 +112,10 @@ void store_depend_stat(int _stat, char *strp)
 			break;
 			
 		case 0x10:
-<<<<<<< HEAD
 			sprintf(strp, "%f,%f,%f,%f;", 	_log_user_ctrl_data.pitch_or_y,
 											_log_user_ctrl_data.roll_or_x,
 											_log_user_ctrl_data.yaw,
 											_log_user_ctrl_data.thr_z);
-=======
-			sprintf(strp, "[ctrl data - pitch: %f, roll: %f, yaw: %f, thr: %f];", 	_log_user_ctrl_data.pitch_or_y,
-																					_log_user_ctrl_data.roll_or_x,
-																					_log_user_ctrl_data.yaw,
-																					_log_user_ctrl_data.thr_z);
->>>>>>> origin/master
 			break;
 			
         case 0x20:
