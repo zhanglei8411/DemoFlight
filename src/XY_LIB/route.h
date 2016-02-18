@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <time.h>
 #include "../DJI_LIB/DJI_Pro_App.h"
 #include "control_law.h"
 #include "wireless_debug.h"
@@ -46,12 +47,12 @@
 
 #define DIFF_HEIGHT_OF_MANUAL_PACK								(0.1)	
 #define DIFF_HEIGHT_OF_AUTO_PACK								(0.52)
-#define DIFF_HEIGHT_WHEN_TAKEOFF								(1)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
+#define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
 
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)
 #define DELIVER_HEIGHT_OF_DOWNH1									(25.0 	- DIFF_HEIGHT_WHEN_TAKEOFF)
-#define DELIVER_HEIGHT_OF_DOWNH2									(0.5)	// 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
+#define DELIVER_HEIGHT_OF_DOWNH2									(0.25)	//0218 (0.5 to 0.25); 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
 #define DELIVER_HEIGHT_OF_DOWNH3									(0.5)
 
 #define GOBACK_HEIGHT_OF_UPH2										(10.0	- DIFF_HEIGHT_WHEN_TAKEOFF)
@@ -228,11 +229,6 @@ static void *drone_goback_task_thread_func(void * arg);
 static void *drone_goback_up_thread_func(void * arg);
 static void *drone_goback_p2p_thread_func(void * arg);
 static void *drone_goback_down_thread_func(void * arg);
-
-
-
-
-
 
 
 

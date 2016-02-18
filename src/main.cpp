@@ -135,7 +135,6 @@ int main(int argc,char **argv)
 	pthread_t express_thread_id;
 	int i = 0;
 	int wait_time = 0;
-	
 
 	printf("\nXunyi Drone Test,Ver 1.1.0\n\n");
 

@@ -112,7 +112,7 @@ void store_depend_stat(int _stat, char *strp)
 			break;
 			
 		case 0x10:
-			sprintf(strp, "%f;%f;%f;%f;", 	_log_user_ctrl_data.pitch_or_y,
+			sprintf(strp, "%f,%f,%f,%f;", 	_log_user_ctrl_data.pitch_or_y,
 											_log_user_ctrl_data.roll_or_x,
 											_log_user_ctrl_data.yaw,
 											_log_user_ctrl_data.thr_z);
@@ -334,7 +334,7 @@ static void *store_to_log_thread_func(void * arg)
 			"longti;lati;alti;height;health;"
 			"cur_xyz;"
 			"no_gps_z;"
-			"pitch;roll;yaw;thr;"
+			"pitch,roll,yaw,thr;"
 			"ultra;"
 			"of_x;of_y;of_z;"
 			"of_ad_x;of_ad_y;of_ad_z;\n");

@@ -1364,13 +1364,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
                             integration_count_z = 0; 
                         }
 
-                        /*
                         if( ultra_height < 5.0 && return_timeout_flag == 0 )
 				{
 					printf("now start to cal return timeout\n");
 					return_timeout_flag = 1;
 				}
-			*/
 
                         if( ultra_height < 8.0)
 				{
@@ -1628,17 +1626,16 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
 
 		//under 5m use ultra height
-		if ( ultra_height < 5.0  && _cpos.height < 15.0 && ultra_height_use_flag ==0 )
+		if ( ultra_height < 5.0  && ultra_height_use_flag ==0 )
 		{			
 		    ultra_height_use_flag = 1;
-                 return_timeout_flag = 1;
 		}
 		
 
 		if (ultra_height_use_flag == 1)
 		{
 			user_ctrl_data.thr_z = _kp_z * (_t_height - cxyz_no_gps.z ); 
-			printf("cxyz_no_gps.z is %f\n", cxyz_no_gps.z);
+			//printf("cxyz_no_gps.z is %f\n", cxyz_no_gps.z);
 		}
 		//---------------
 		
@@ -1660,7 +1657,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		}
 
 		//printf("last dis: %f\n", (_t_height - _cpos.height));
-		if(fabs(_t_height - cxyz_no_gps.z) < _threshold && ultra_height_use_flag == 1)
+		if(fabs(_t_height - cxyz_no_gps.z) < _threshold && image_height_use_flag == 1)
 		{
 			return 1;
 		}
