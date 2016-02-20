@@ -18,33 +18,50 @@
 #include "common/common.h"
 #include "control_steer.h"
 
+/*-----velocity for up down------*/
+/*deliver up*/
+#define DELIVER_MAX_VEL_UP_TO_H2								(1.25)	
+#define DELIVER_MIN_VEL_UP_TO_H2								(1.25)	//0220 (1.0 to 1.25)
 
-#define DELIVER_MAX_VEL_UP_TO_H2								(1.25)	//m/s
 #define DELIVER_MAX_VEL_UP_TO_H3								(1.75)
+#define DELIVER_MIN_VEL_UP_TO_H3								(0.5)	//0220 (1.0 to 0.5)
+
+/*deliver down*/
 #define DELIVER_MAX_VEL_DOWN_TO_H1								(1.75)
-#define DELIVER_MAX_VEL_DOWN_TO_H2								(0.35)
-#define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)
+#define DELIVER_MIN_VEL_DOWN_TO_H1								(0.2)	//0220 (0.4 to 0.2); ready to hover find image
 
+/*down and drop*/
+#define DELIVER_MAX_VEL_DOWN_TO_H2								(0.4)	//0220 (0.35 to 0.4)
+#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.4)	//0220 (0.35 to 0.4);01-27 (0.2 to 0.35)
+
+/*delete*/
+#define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)	// dele, no use
+#define DELIVER_MIN_VEL_DOWN_TO_H3								(0.2)	//deke, no use
+
+/*go back up */
 #define GOBACK_MAX_VEL_UP_TO_H2									(1.0)
-#define GOBACK_MAX_VEL_UP_TO_H3									DELIVER_MAX_VEL_UP_TO_H3
-#define GOBACK_MAX_VEL_DOWN_TO_H1								DELIVER_MAX_VEL_DOWN_TO_H1
-#define GOBACK_MAX_VEL_DOWN_TO_H2								DELIVER_MAX_VEL_DOWN_TO_H2
+#define GOBACK_MIN_VEL_UP_TO_H2									(1.0)
+
+#define GOBACK_MAX_VEL_UP_TO_H3									(1.75)
+#define GOBACK_MIN_VEL_UP_TO_H3									(0.5)	//0220 (1.0 to 0.5)
+
+
+/*go back down */
+#define GOBACK_MAX_VEL_DOWN_TO_H1								(1.75)
+#define GOBACK_MIN_VEL_DOWN_TO_H1								(0.2)	//0220 (0.5 to 0.2); ready to hover find image
+
+#define GOBACK_MAX_VEL_DOWN_TO_H2								(0.5)	//0220 set o.5
+#define GOBACK_MIN_VEL_DOWN_TO_H2								(0.5)	//0220 set o.5
+
 #define GOBACK_MAX_VEL_DOWN_TO_H3								DELIVER_MAX_VEL_DOWN_TO_H3
-
-#define DELIVER_MIN_VEL_UP_TO_H2								(1.0)	//m/s
-#define DELIVER_MIN_VEL_UP_TO_H3								(1.0)
-#define DELIVER_MIN_VEL_DOWN_TO_H1								(0.4)
-#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.35)	//01-27 (0.2 to 0.35)
-#define DELIVER_MIN_VEL_DOWN_TO_H3								(0.2)
-
-#define GOBACK_MIN_VEL_UP_TO_H2									DELIVER_MIN_VEL_UP_TO_H2
-#define GOBACK_MIN_VEL_UP_TO_H3									DELIVER_MIN_VEL_UP_TO_H3
-#define GOBACK_MIN_VEL_DOWN_TO_H1								DELIVER_MIN_VEL_DOWN_TO_H1
-#define GOBACK_MIN_VEL_DOWN_TO_H2								DELIVER_MIN_VEL_DOWN_TO_H2
 #define GOBACK_MIN_VEL_DOWN_TO_H3								DELIVER_MIN_VEL_DOWN_TO_H3
+/*-----velocity for up down------*/
 
 
 
+
+/*----------Height define---------*/
+/*Take off height correct*/
 #define DIFF_HEIGHT_OF_MANUAL_PACK								(0.1)	
 #define DIFF_HEIGHT_OF_AUTO_PACK								(0.52)
 #define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
@@ -52,7 +69,11 @@
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)
 #define DELIVER_HEIGHT_OF_DOWNH1									(25.0 	- DIFF_HEIGHT_WHEN_TAKEOFF)
-#define DELIVER_HEIGHT_OF_DOWNH2									(0.25)	//0218 (0.5 to 0.25); 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
+
+#define DELIVER_HEIGHT_OF_DOWNH2								(0.25)	//0218 (0.5 to 0.25); 01-23 (0.8 to 0.5)	01-25 (use image height no diff)
+#define DELIVER_THRESHOLD_OF_DOWN_TO_H2_OUT						(0.15)	//01-23 (0.25 to 0.15)
+
+
 #define DELIVER_HEIGHT_OF_DOWNH3									(0.5)
 
 #define GOBACK_HEIGHT_OF_UPH2										(10.0	- DIFF_HEIGHT_WHEN_TAKEOFF)
@@ -61,11 +82,11 @@
 #define GOBACK_HEIGHT_OF_DOWNH2										(0.3)	// 01-27 (1.5 to 0.3)
 #define GOBACK_HEIGHT_OF_DOWNH3										(0.3)	// 01-27 delete the process of down to h3 
 
-
+/*height diff*/
 #define DELIVER_THRESHOLD_OF_UP_TO_H2_OUT						(1.0)		
 #define DELIVER_THRESHOLD_OF_UP_TO_H3_OUT						(1.0)	
 #define DELIVER_THRESHOLD_OF_DOWN_TO_H1_OUT						(1.0)	
-#define DELIVER_THRESHOLD_OF_DOWN_TO_H2_OUT						(0.15)	//01-23 (0.25 to 0.15)
+
 #define DELIVER_THRESHOLD_OF_DOWN_TO_H3_OUT						(0.15)
 
 #define GOBACK_THRESHOLD_OF_UP_TO_H2_OUT						(1.0)
@@ -73,11 +94,11 @@
 #define GOBACK_THRESHOLD_OF_DOWN_TO_H1_OUT						(1.0)
 #define GOBACK_THRESHOLD_OF_DOWN_TO_H2_OUT						(0.25)
 #define GOBACK_THRESHOLD_OF_DOWN_TO_H3_OUT						(0.15)
+/*----------Height define---------*/
 
 
 
-
-
+/*----------Height control para define---------*/
 #define DELIVER_UP_TO_H2_KPZ									(0.2)
 #define DELIVER_UP_TO_H3_KPZ									(0.2)
 #define DELIVER_DOWN_TO_H1_KPZ									(0.2)
@@ -90,32 +111,11 @@
 #define GOBACK_DOWN_TO_H1_KPZ									(0.2)
 #define GOBACK_DOWN_TO_H2_KPZ									(0.2)
 #define GOBACK_DOWN_TO_H3_KPZ									(0.2)
+/*----------Height control para define---------*/
 
 
 
-
-
-#define TAKEOFF_HEIGHT_H_U1						(1.0)	//m
-#define GO_UP_TO_HEIGHT_WTIH_IMAGE_H_U2			(10.0)	//m
-#define GO_UP_TO_CRUICE_HEIGHT_H_U3				(35.0)	//m, ºãÉúÐ¡·¿×ÓµÄ°²È«¸ß¶È
-#define GO_DOWN_TO_HEIGHT_H_D3					(25.0)	//m
-#define GO_DOWN_TO_HEIGHT_WITH_IMAGE_H_D2		(1.0)	//m
-#define GO_DOWN_TO_HEIGHT_READY_TO_LAND_H_D1	(0.25)	//m
-
-#define UP_TO_HEIGHT_WITH_VEL_AT_END			(1.5)	//m, up is positive +, suggest be same as the vel in next stage
-#define DOWN_TO_HEIGHT_WITH_VEL_AT_END			(-0.5)	//m, down is negtive -, suggest be same as the vel in next stage
-
-#define Ultra_DELTA_UNLOAD 						(0.045) //m£¬ 0110ÊÔÑéÊµ¼Ê°²×°Êý¾Ý
-#define Ultra_DELTA_LOAD						(0.148) //m,ÕÂÀÚ¹À¼ÆÖµ£¬Î´²âÊÔ
-
-#define MODE_1_UP_TO_U2_IMAGE_VEL_1				1
-#define MODE_2_UP_TO_U3							2
-#define MODE_3_DOWN_TO_D3						3
-#define MODE_4_DOWN_TO_D2_IMAGE_VEL_N05			4
-#define MODE_5_DOWN_TO_D1						5
-#define MODE_T1_TEST_HOVER_WITH_IMAGE			6
-
-
+/*-----Coordinations------*/
 #define XYI_TERRACE_LONGTI						(2.09443030)//Google Earth
 #define XYI_TERRACE_LATI						(0.52849836)//Google Earth
 #define XYI_TERRACE_ALTI						(0.0)
@@ -124,23 +124,14 @@
 #define ORIGIN_IN_HENGSHENG_LATI				(0.528485654) //Google EarthÌØÕ÷µã×ø±ê²ÎÊý,»¡¶È.9
 #define ORIGIN_IN_HENGSHENG_ALTI				(0.0)
 
-/*
-#define DELTA_X_M_GOOGLEEARTH					(3.611858)   //m base the data in test on 0113-2
-#define DELTA_Y_M_GOOGLEEARTH					(0.243988)   //m	
-#define DELTA_Z_M_GOOGLEEARTH					(-110.209)   //m	
-*/
-
 /* 1-15 test */
 #define DELTA_X_M_GOOGLEEARTH					(-6.302767)   //m base the data in test on 0113-2
 #define DELTA_Y_M_GOOGLEEARTH					(-0.504967)   //m	
 #define DELTA_Z_M_GOOGLEEARTH					(-110.209)   //m	
 
+/*-----Coordinations------*/
 
-#define GPS_DELTA_LONGTI	(-0.000081)					//»¡¶È£¬Ïà¶ÔÓÚGoogle map
-#define GPS_DELTA_LATI		(0.000044)
-#define TARGET_LONTI_FROM_GOOGLE	2.094503592			//ÓðÃ«Çò³¡Æð·Éµã
-#define TARGET_LATI_FROM_GOOGLE		0.528442797
-#define TARGET_ALTI_FROM_DJI_TEST	-139.26440430	
+
 
 
 inline void set_leg_seq(struct Leg *_pleg, int _leg_seq)
@@ -216,14 +207,7 @@ static void *drone_deliver_task_thread_func(void * arg);
 static void *drone_deliver_up_thread_func(void * arg);
 static void *drone_deliver_p2p_thread_func(void * arg);
 static void *drone_deliver_down_thread_func(void * arg);
-int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);
-int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
-int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void);
-int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
-int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
-int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
-int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel, float _min_vel, float _t_height, float _threshold, double _kp_z);
-int XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER(void);
+
 
 static void *drone_goback_task_thread_func(void * arg);
 static void *drone_goback_up_thread_func(void * arg);
