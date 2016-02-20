@@ -1659,7 +1659,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				user_ctrl_data.thr_z = 0 - _max_vel;
 		}
 
-		if(cxyz_no_gps.z - _t_height) < _threshold && ultra_height_use_flag == 1)
+		if((cxyz_no_gps.z - _t_height) < _threshold && ultra_height_use_flag == 1)
 		{
 			return 1;
 		}
@@ -2328,7 +2328,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 				user_ctrl_data.thr_z = 0 - _max_vel;
 		}
 
-		if(cxyz_no_gps.z - _t_height) < _threshold && ultra_height_use_flag == 1)
+		if((cxyz_no_gps.z - _t_height) < _threshold && ultra_height_use_flag == 1)
 		{
 			return 1;
 		}
@@ -2488,14 +2488,16 @@ int temporary_init_deliver_route_list(void)
 	XY_Debug_Send_At_Once("[g_origin_xyz_app.x %.3lf,g_origin_xyz_app.y %.3lf,g_origin_xyz_app.z %.3lf]\n", g_origin_xyz_app.x,g_origin_xyz_app.y,g_origin_xyz_app.z);
 	
 	//ÉèÖÃÖÕµãÎ»ÖÃ, not finish	
-	//set_leg_end_pos(&task_info, start_pos.longti - 0.000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
+	//set_leg_end_pos(&task_info, start_pos.longti - 0./Users/zhanglei/xunyi/DemoFlight/src/XY_LIB/control_law.cpp000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
 
 #if 0
 	set_leg_end_pos(&task_info, XYI_TERRACE_LONGTI, XYI_TERRACE_LATI, XYI_TERRACE_ALTI);
 #else
-	  set_leg_end_pos(&task_info, 2.094421805, 0.528476281, ORIGIN_IN_HENGSHENG_ALTI);
-   // set_leg_end_pos(&task_info, 2.094280800, 0.528453784, ORIGIN_IN_HENGSHENG_ALTI);
-	//set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);
+      extern cJSON *json;
+      set_leg_end_pos(&task_info,((cJSON_GetObjectItem(json, "lng")->valuedouble/180)*3.1415926), ((cJSON_GetObjectItem(json, "lat")->valuedouble/180)*3.1415926),ORIGIN_IN_HENGSHENG_ALTI);
+      //set_leg_end_pos(&task_info, 2.098446255, 0.526453375, ORIGIN_IN_HENGSHENG_ALTI);
+      // set_leg_end_pos(&task_info, 2.094280800, 0.528453784, ORIGIN_IN_HENGSHENG_ALTI);
+      //set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);
 #endif
 	
 

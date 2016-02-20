@@ -13,7 +13,7 @@
 #include <math.h>
 #include "../DJI_LIB/DJI_Pro_App.h"
 #include "image_identify.h"
-
+#include "ultra_filter.h"
 
 int XY_SD_Log_Setup(void);
 void set_no_gps_z_data(float _no_gps_z);

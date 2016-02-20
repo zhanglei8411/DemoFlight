@@ -12,6 +12,7 @@ sem_t ultra_get_sem;
 Ultra_Data ultra_data;
 
 
+#if 0
 
 int ultra_index = 0;
 float ultra_buf[ULTRA_ANALYSIS_NUM]={};
@@ -182,7 +183,7 @@ int ultra_calc(float _log_ultra_data)
 	}
 	return 1;
 }
-
+#endif
 
 int tell_external_ultra_is_available(void)
 {

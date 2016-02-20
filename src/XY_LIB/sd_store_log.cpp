@@ -67,6 +67,7 @@ int XY_SD_Log_Setup(void)
 }
 
 float _log_ultra_data;
+float _calc_ultra_data;
 Offset _log_offset;
 Offset _log_offset_adjust;
 api_pos_data_t _log_pos;
@@ -118,8 +119,8 @@ void store_depend_stat(int _stat, char *strp)
 											_log_user_ctrl_data.thr_z);
 			break;
 			
-        case 0x20:
-			sprintf(strp, "%.4f;", _log_ultra_data);
+              case 0x20:
+			sprintf(strp, "%.4f;%.4f;", _log_ultra_data,_calc_ultra_data);
 			break;
 			
 		case 0x40:
@@ -316,7 +317,8 @@ static void *store_to_log_thread_func(void * arg)
 	struct tm         *tmlocal; 
 	double dji_time=0;
 	char _wbuf[500] = {0};
-
+       Queue* pq=create(4);
+       
 	if(log_fd == -1)
 	{
 		printf("Bad log fd.\n");
@@ -335,7 +337,7 @@ static void *store_to_log_thread_func(void * arg)
 			"cur_xyz;"
 			"no_gps_z;"
 			"pitch,roll,yaw,thr;"
-			"ultra;"
+			"ultra;ultra_calc"
 			"of_x;of_y;of_z;"
 			"of_ad_x;of_ad_y;of_ad_z;\n");
 	
@@ -373,6 +375,16 @@ static void *store_to_log_thread_func(void * arg)
 			
 			if(XY_Get_Ultra_Data(&_log_ultra_data, ULTRA_GET_ID_B) == 0)
 		   	{
+                           if(!ultra_queue_full(pq))
+                           {
+                                push_queue(pq,_log_ultra_data);
+                           }
+                           if(ultra_queue_full(pq))
+                           {
+                                ultra_calc(pq);
+                                queue_pop(pq);
+                                Get_calced_Ultra(pq,&_calc_ultra_data);
+                           }
 			   	stat |= 0x20;
 		   	}
 
