@@ -31,8 +31,8 @@
 #define DELIVER_MIN_VEL_DOWN_TO_H1								(0.2)	//0220 (0.4 to 0.2); ready to hover find image
 
 /*down and drop*/
-#define DELIVER_MAX_VEL_DOWN_TO_H2								(0.4)	//0220 (0.35 to 0.4)
-#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.4)	//0220 (0.35 to 0.4);01-27 (0.2 to 0.35)
+#define DELIVER_MAX_VEL_DOWN_TO_H2								(0.35)	//0220 (0.35 to 0.4)
+#define DELIVER_MIN_VEL_DOWN_TO_H2								(0.35)	//0220 (0.35 to 0.4);01-27 (0.2 to 0.35)
 
 /*delete*/
 #define DELIVER_MAX_VEL_DOWN_TO_H3								(0.25)	// dele, no use

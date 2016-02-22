@@ -56,7 +56,7 @@ void travel(Queue* pq)//遍历
 	printf("\n");
 
 }
-int queue_pop(Queue* pq)//出队
+float queue_pop(Queue* pq)//出队
 {
 	if(empty(pq))
 	{
@@ -64,6 +64,7 @@ int queue_pop(Queue* pq)//出队
 		return -1;
 	}
 	--pq->cnt;
+       //printf("ultra_pop %.4f",pq->arr[(pq->front++)%pq->len]);
 	return pq->arr[(pq->front++)%pq->len];
 	
 }
@@ -77,14 +78,14 @@ int Get_calced_Ultra(Queue*pq,float* ultra)
     return 0;
 }
 
-int get_head(Queue* pq)//获取首元素
+float get_head(Queue* pq)//获取首元素
 {
 	if(empty(pq))
 	return -1;
 	return pq->arr[(pq->front)%pq->len];
 }
 
-int get_tail(Queue* pq)//获取队尾元素
+float get_tail(Queue* pq)//获取队尾元素
 {
 	if(empty(pq))
 	return -1;
@@ -102,7 +103,7 @@ static int STD_calc(float avg, Queue *pq)
      float stdev;
      variance=(pow((avg-pq->arr[(pq->front)%pq->len]),2)+ pow((avg-pq->arr[(pq->front+1)%pq->len]),2)+pow((avg-pq->arr[(pq->front+2)%pq->len]),2)+pow((avg-pq->arr[(pq->front+3)%pq->len]),2) )/4;
      stdev=sqrt(variance);
-     if(stdev>0.3)
+     if(stdev > 0.3)
      {
         return -1;
      }
@@ -131,26 +132,43 @@ static void filter_hop(Queue *pq)
 
 void ultra_calc(Queue *pq)
 {  
-       float avg = (pq->arr[(pq->front)%pq->len] + pq->arr[(pq->front+1)%pq->len] + pq->arr[(pq->front+2)%pq->len] + pq->arr[(pq->front+3)%pq->len] ) / 4;
-	if(STD_calc(avg,pq)==0)
-       {		
+    float avg = (pq->arr[(pq->front)%pq->len] + pq->arr[(pq->front+1)%pq->len] + pq->arr[(pq->front+2)%pq->len] + pq->arr[(pq->front+3)%pq->len] ) / 4;
+	if(STD_calc(avg,pq) == 0)
+    {		
 		float tmp = 0;
 		tmp = abs(pq->arr[(pq->front)%pq->len] - avg);	
 		if(tmp <= 0.2 && tmp >= 0)
 		{
 			//第三层过滤   
-        	       filter_hop(pq);
+        	filter_hop(pq);
 		}
 		else
 		{               
-			pq->arr[(pq->front)%pq->len]=0;
+			pq->arr[(pq->front)%pq->len] = 0;
 		}
-       }
-       else
+    }
+    else
 	{
-           pq->arr[(pq->front)%pq->len]=0;
-       }
-       return;
+       pq->arr[(pq->front)%pq->len] = 0;
+    }
+    return;
 }
 
+void ultra_height_filter(Queue *pq,float data,float *filter_data)
+{
+	printf("data is %.4f\n",data);
+	if(!ultra_queue_full(pq))
+   	{
+        push_queue(pq,data);
+        //printf("_log_ultra_data is %.4f\n",_log_ultra_data);
+  	 }
+   	if(ultra_queue_full(pq))
+   	{
+        ultra_calc(pq);
+		Get_calced_Ultra(pq,filter_data);
+		printf("filter_data is %.4f\n",*filter_data);
+        queue_pop(pq);                            
+        //printf("_calc_ultra_data is %.4f\n",_calc_ultra_data);
+   	}
+}
 

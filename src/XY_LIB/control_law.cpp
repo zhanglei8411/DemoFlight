@@ -8,6 +8,7 @@ extern pthread_mutex_t debug_mutex;
 extern pthread_cond_t debug_cond;
 /* define in route.cpp */
 extern int drone_goback;
+extern Leg_Node *cur_legn;
 
 
 void init_g_origin_pos(api_pos_data_t *_g_origin_pos)
@@ -643,44 +644,43 @@ int XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER(void)
         #if DEBUG_PRINT             
             printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n", cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
         #endif
-
-            //hover to FP, but lower kp to the FP without image
-            k1d = 0.05;     
-            k1p = 0.15; //0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1   // 01-23 (0.1 to 0.15)
-            k2d = 0.05;
-            k2p = 0.15;     // 01-23 (0.1 to 0.15) not flight test 
-
-            //use the origin updated last time "target_origin_pos", to get the current cxyz
-            geo2XYZ(_cpos, &cXYZ);
-            XYZ2xyz(target_origin_pos, cXYZ, &cxyz);        
-
-            //use the xyz coordination to get the target, the same as the FP control        
-            x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(_cvel.x);
-            y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(_cvel.y);
-            
-            user_ctrl_data.roll_or_x = x_n_vel;         
-            user_ctrl_data.pitch_or_y = y_e_vel;        
-            user_ctrl_data.thr_z =  assign_height - _cpos.height;  
-
-            last_dis_to_mark = sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
-            //last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
-            
-            //if (last_dis_to_mark < HOVER_POINT_RANGE)
-            if(last_dis_to_mark < (10*HOVER_POINT_RANGE) )//from 1.5 to 10*0.1=1, zhanglei 0123
-            {
-                arrive_flag = 1;
-                target_update=0;
-            }
-            
-        }
-        else
+		}
+		else
         {
             user_ctrl_data.roll_or_x = 0;
             user_ctrl_data.pitch_or_y = 0;
             user_ctrl_data.thr_z =  assign_height - _cpos.height;
         }
         
+        //hover to FP, but lower kp to the FP without image
+        k1d = 0.05;     
+        k1p = 0.15; //0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1   // 01-23 (0.1 to 0.15)
+        k2d = 0.05;
+        k2p = 0.15;     // 01-23 (0.1 to 0.15) not flight test 
+
+        //use the origin updated last time "target_origin_pos", to get the current cxyz
+        geo2XYZ(_cpos, &cXYZ);
+        XYZ2xyz(target_origin_pos, cXYZ, &cxyz);        
+
+        //use the xyz coordination to get the target, the same as the FP control        
+        x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(_cvel.x);
+        y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(_cvel.y);
         
+        user_ctrl_data.roll_or_x = x_n_vel;         
+        user_ctrl_data.pitch_or_y = y_e_vel;        
+        user_ctrl_data.thr_z =  assign_height - _cpos.height;  
+
+        last_dis_to_mark = sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
+        //last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
+        
+        //if (last_dis_to_mark < HOVER_POINT_RANGE)
+        if(last_dis_to_mark < (10*HOVER_POINT_RANGE) )//from 1.5 to 10*0.1=1, zhanglei 0123
+        {
+            arrive_flag = 1;
+            target_update=0;
+        }
+            
+
         DJI_Pro_Attitude_Control(&user_ctrl_data);
         set_ctrl_data(user_ctrl_data);
         usleep(20000);
@@ -732,7 +732,15 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
     struct timespec start = {0, 0}, end = {0, 0};
     double cost_time = 0.02;
     float ultra_height=0;
-    
+	float ultra_tmp=0;
+	Queue* pq=create(4);
+	float ultra_arr[5]={};
+    int count_ultra_low = 0;
+	int ultra_height_is_low = 0;
+	float image_arr[5]={};
+    int count_image_low = 0;
+	int image_height_is_low = 0;
+	
     DJI_Pro_Get_Pos(&_focus_point);
     DJI_Pro_Get_GroundVo(&_cvel);
     
@@ -801,52 +809,59 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             }
         }
         
-        if(XY_Get_Ultra_Data(&ultra_height, ULTRA_GET_ID_B) == 0)
+        if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
-            ultra_height -= ULTRA_INSTALL_HEIGHT;
-            
-            if(ultra_height < 8.0)	// only below 8m the ultra data begin used.
-            {
-                cxyz_no_gps.z = ultra_height;
-                
-                integration_count_z = 0;
-            }
-            
-            /*
-             if( ultra_height < 5.0 && return_timeout_flag == 0 )
-             {
-             printf("now start to cal return timeout\n");
-             return_timeout_flag = 1;
-             }
-             */
-            
-            if( ultra_height < 8.0)
-            {
-                if ( (ultra_height < 3.0 && ultra_height > 2.5) && ultra_z_3_0_flag == 0)
-                {
-                    ultra_z_3_0_flag = 1;
-                    count_time_integration_flag = 1;
-                    ultra_z1 = ultra_height;
-                    printf("                                                    ultra_z1 is %f\n", ultra_z1);
-                }
-                
-                if ( (ultra_height < 2.5 && ultra_height > 2.0) && ultra_z_2_5_flag == 0 && ultra_z_3_0_flag == 1)
-                {
-                    ultra_z_2_5_flag = 1;
-                    count_time_integration_flag = 0;
-                    ultra_z2 = ultra_height;
-                    cxyz_no_gps.z = ultra_height;
-                    cvel_no_gps.z = _cvel.z;
-                    printf("                                                   ultra_z2 is %f\n", ultra_z2);
-                }
-            }
-            
-            // not get the ultra data for velocity calcu
-            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
-            {
-                cvel_no_gps.z = _cvel.z;
-                cxyz_no_gps.z = offset.z;
-            }
+        	printf("ultra_tmp is %.4f\n",ultra_tmp);
+        	ultra_height_filter(pq,ultra_tmp,&ultra_height);
+
+			if (ultra_height != 0)
+			{
+				ultra_height -= ULTRA_INSTALL_HEIGHT;
+	            printf("ultra_B is %.4f\n",ultra_height);
+	            if(ultra_height < 8.0)	// only below 8m the ultra data begin used.
+	            {
+	                cxyz_no_gps.z = ultra_height;
+	                
+	                integration_count_z = 0;
+	            }
+	            
+	            /*
+	             if( ultra_height < 5.0 && return_timeout_flag == 0 )
+	             {
+	             printf("now start to cal return timeout\n");
+	             return_timeout_flag = 1;
+	             }
+	             */
+	            
+	            if( ultra_height < 8.0)
+	            {
+	                if ( (ultra_height < 3.0 && ultra_height > 2.5) && ultra_z_3_0_flag == 0)
+	                {
+	                    ultra_z_3_0_flag = 1;
+	                    count_time_integration_flag = 1;
+	                    ultra_z1 = ultra_height;
+	                    printf("                                                    ultra_z1 is %f\n", ultra_z1);
+	                }
+	                
+	                if ( (ultra_height < 2.5 && ultra_height > 2.0) && ultra_z_2_5_flag == 0 && ultra_z_3_0_flag == 1)
+	                {
+	                    ultra_z_2_5_flag = 1;
+	                    count_time_integration_flag = 0;
+	                    ultra_z2 = ultra_height;
+	                    cxyz_no_gps.z = ultra_height;
+	                    cvel_no_gps.z = _cvel.z;
+	                    printf("                                                   ultra_z2 is %f\n", ultra_z2);
+	                }
+	            }
+	            
+	            // not get the ultra data for velocity calcu
+	            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
+	            {
+	                cvel_no_gps.z = _cvel.z;
+	                cxyz_no_gps.z = offset.z;
+	            }
+				
+			}
             
         }
         
@@ -1022,8 +1037,61 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         /*normal use gps height*/
         user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
         
-        /*under 5m use ultra height, launch the retrun timeout, enter once*/
-        if ( ultra_height < HEIGHT_TO_USE_ULTRA  && _cpos.height < 15.0 && ultra_height_use_flag ==0 )
+        /*under 3.5m use ultra height, launch the retrun timeout, enter once*/
+		/*judge the height really below 3.5m*/
+		if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0 )
+		{
+			ultra_arr[count_ultra_low] = ultra_height;
+			printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
+			if(count_ultra_low == 0)
+			{
+				count_ultra_low++;
+			}
+			
+			else if(count_ultra_low > 0 && ultra_arr[count_ultra_low] <=ultra_arr[count_ultra_low-1] && ultra_arr[count_ultra_low]!=0)
+			{
+				count_ultra_low++;
+				
+			}
+			else
+			{
+				count_ultra_low = 0;
+			}
+			
+			if(count_ultra_low >= 5)
+			{
+				count_ultra_low = 0;
+				ultra_height_is_low = 1;
+			}
+		}
+
+		if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 )
+		{
+			image_arr[count_image_low] = offset.z;
+			printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
+			if(count_image_low == 0)
+			{
+				count_image_low++;
+			}
+			
+			else if(count_image_low > 0 && ultra_arr[count_image_low] < ultra_arr[count_image_low-1] && ultra_arr[count_image_low]!=0)
+			{
+				count_image_low++;
+			}
+			else
+			{
+				count_image_low = 0;
+			}
+			
+			if(count_image_low >= 5)
+			{
+				count_image_low = 0;
+				image_height_is_low = 1;
+			}
+		}
+
+		
+		if (( ultra_height_is_low == 1 || ultra_height_is_low == 1 ) && _cpos.height < 10.0 && ultra_height_use_flag ==0 )
         {			
             ultra_height_use_flag = 1;
             return_timeout_flag = 1;
@@ -1463,10 +1531,12 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
     int arrive_flag = 1;
     int ultra_height_use_flag = 0;
     float ultra_z1, ultra_z2;
-    float ultra_height=0;
+    float ultra_height = 0;
+	float ultra_tmp = 0;
     int ultra_z_2_5_flag = 0, ultra_z_3_0_flag = 0;
     int count_time_integration_flag = 0;
     int time_cnt = 0;
+	Queue* pq=create(4);
 
     
     DJI_Pro_Get_Pos(&_focus_point);
@@ -1518,53 +1588,59 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
         roll_angle  = 180 / PI * roll_rard;
         pitch_angle = 180 / PI * pitch_rard;
 
-        if(XY_Get_Ultra_Data(&ultra_height, ULTRA_GET_ID_B) == 0)
+        if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
+        	ultra_height_filter(pq,ultra_tmp,&ultra_height);//add 0221 by juzheng
             ultra_height -= ULTRA_INSTALL_HEIGHT; // install diff of ultrasonic equip, 0.135m
 
-            if(ultra_height < 8.0)  // only below 8m the ultra data begin used.
-            {
-                cxyz_no_gps.z = ultra_height;
+			if (ultra_height != 0)
+			{
+				if(ultra_height < 8.0)  // only below 8m the ultra data begin used.
+	            {
+	                cxyz_no_gps.z = ultra_height;
 
-                integration_count_z = 0; 
-            }
+	                integration_count_z = 0; 
+	            }
 
-        /*
-            if( ultra_height < 5.0 && return_timeout_flag == 0 )
-            {
-                printf("now start to cal return timeout\n");
-                return_timeout_flag = 1;
-            }
-        */
+	        	/*
+	            if( ultra_height < 5.0 && return_timeout_flag == 0 )
+	            {
+	                printf("now start to cal return timeout\n");
+	                return_timeout_flag = 1;
+	            }
+	       		 */
 
-            if( ultra_height < 8.0)
-            {
-                if ( (ultra_height < 3.0 && ultra_height > 2.5) && ultra_z_3_0_flag == 0)
-                {
-                    ultra_z_3_0_flag = 1;
-                    count_time_integration_flag = 1;
-                    ultra_z1 = ultra_height;
-                    printf("                                                    ultra_z1 is %f\n", ultra_z1);
-                }
+	            if( ultra_height < 8.0)
+	            {
+	                if ( (ultra_height < 3.0 && ultra_height > 2.5) && ultra_z_3_0_flag == 0)
+	                {
+	                    ultra_z_3_0_flag = 1;
+	                    count_time_integration_flag = 1;
+	                    ultra_z1 = ultra_height;
+	                    printf("                                                    ultra_z1 is %f\n", ultra_z1);
+	                }
 
-                if ( (ultra_height < 2.5 && ultra_height > 2.0) && ultra_z_2_5_flag == 0 && ultra_z_3_0_flag == 1)
-                {
-                    ultra_z_2_5_flag = 1;
-                    count_time_integration_flag = 0;
-                    ultra_z2 = ultra_height;
-                    cxyz_no_gps.z = ultra_height;
-                    cvel_no_gps.z = _cvel.z;
-                    printf("                                                   ultra_z2 is %f\n", ultra_z2);
-                }
-            }
-                
-            // not get the ultra data for velocity calcu
-            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
-            {
-                cvel_no_gps.z = _cvel.z;
-                cxyz_no_gps.z = offset.z;
-            }
-                
+	                if ( (ultra_height < 2.5 && ultra_height > 2.0) && ultra_z_2_5_flag == 0 && ultra_z_3_0_flag == 1)
+	                {
+	                    ultra_z_2_5_flag = 1;
+	                    count_time_integration_flag = 0;
+	                    ultra_z2 = ultra_height;
+	                    cxyz_no_gps.z = ultra_height;
+	                    cvel_no_gps.z = _cvel.z;
+	                    printf("                                                   ultra_z2 is %f\n", ultra_z2);
+	                }
+	            }
+	                
+	            // not get the ultra data for velocity calcu
+	            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
+	            {
+	                cvel_no_gps.z = _cvel.z;
+	                cxyz_no_gps.z = offset.z;
+	            }
+
+			}
+			
+            
         }
 
 
@@ -1740,7 +1816,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
         user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
 
         /*under 5m use ultra height, enter once*/
-        if ( ultra_height < HEIGHT_TO_USE_ULTRA  && _cpos.height < 15.0 && ultra_height_use_flag ==0 )
+        if ( ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0  && _cpos.height < 10.0 && ultra_height_use_flag ==0 )
         {           
             ultra_height_use_flag = 1;
         }

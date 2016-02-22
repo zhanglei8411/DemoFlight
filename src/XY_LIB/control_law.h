@@ -8,7 +8,7 @@
 #include "route.h"
 #include "common/common.h"
 #include "image_identify.h"
-
+#include "ultra_filter.h"
 
 #define DT 								(0.02)	//the period, for integration
 #define PI								(3.1415926)
@@ -20,7 +20,7 @@
 
 /*ultra para*/
 #define ULTRA_INSTALL_HEIGHT            (0.135) //install diff of ultrasonic equip, 0.135m
-#define HEIGHT_TO_USE_ULTRA				(5.0)
+#define HEIGHT_TO_USE_ULTRA				(3.5)	//0221 (5.0 to 3.5)
 
 /*image para*/
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
