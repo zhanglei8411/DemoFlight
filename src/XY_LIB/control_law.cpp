@@ -740,6 +740,12 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	float image_arr[5]={};
     int count_image_low = 0;
 	int image_height_is_low = 0;
+	int count_time_offset_flag = 0;
+	int count_offset = 0;
+	int if_offset_x_y_full = 0;
+	float offset_x[5] = {} , offset_y[5] = {}, count_xy[5] = {};
+	int count_time_image = 0;
+	float vel_x_image, vel_y_image;
 	
     DJI_Pro_Get_Pos(&_focus_point);
     DJI_Pro_Get_GroundVo(&_cvel);
@@ -814,6 +820,34 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         	printf("ultra_tmp is %.4f\n",ultra_tmp);
         	ultra_height_filter(pq,ultra_tmp,&ultra_height);
 
+			/*judge the height really below 3.5m*/
+			if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0 && _cpos.height < 10.0 )
+			{
+				ultra_arr[count_ultra_low] = ultra_height;
+				printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
+				if(count_ultra_low == 0)
+				{
+					count_ultra_low++;
+				}
+				
+				else if(count_ultra_low > 0 && ultra_arr[count_ultra_low] < ultra_arr[count_ultra_low-1] && ultra_arr[count_ultra_low]!=0)
+				{
+					count_ultra_low++;
+					
+				}
+				else
+				{
+					count_ultra_low = 0;
+				}
+				
+				if(count_ultra_low >= 5)
+				{
+					count_ultra_low = 0;
+					ultra_height_is_low = 1;
+				}
+			}
+			
+
 			if (ultra_height != 0)
 			{
 				ultra_height -= ULTRA_INSTALL_HEIGHT;
@@ -858,7 +892,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
 	            {
 	                cvel_no_gps.z = _cvel.z;
-	                cxyz_no_gps.z = offset.z;
+	                cxyz_no_gps.z = ultra_height;
 	            }
 				
 			}
@@ -882,76 +916,188 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             }
             
         }
+
+
+		/**Calcu the XY vel by image***/		
+		if (count_time_offset_flag == 1)
+		{
+			count_time_image++;
+		}
+
+		if (count_time_image > 500)
+		{
+			count_time_image = 0;
+			count_offset = 0;	
+			if_offset_x_y_full = 0;
+		}
+
         
         
-        if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1 )
+        if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 )
         {
-            arrive_flag = 0;
-            target_has_updated = 1;
-            
+   
             offset.x = offset.x / 100;
             offset.y = offset.y / 100;
+			offset.z = offset.z / 100;
+
+			if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 && _cpos.height < 10.0 )
+			{
+				image_arr[count_image_low] = offset.z;
+				printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
+				if(count_image_low == 0)
+				{
+					count_image_low++;
+				}
+				
+				else if(count_image_low > 0 && image_arr[count_image_low] < image_arr[count_image_low-1] && image_arr[count_image_low]!=0)
+				{
+					count_image_low++;
+				}
+				else
+				{
+					count_image_low = 0;
+				}
+				
+				if(count_image_low >= 5)
+				{
+					count_image_low = 0;
+					image_height_is_low = 1;
+				}
+			}
+			
+			/*****use image offset to get the XY velocity********/					
+			if(count_offset < 5 && count_offset >= 0)
+			{
+				count_time_offset_flag = 1;
+				
+				offset_x[count_offset] == offset.x;
+				offset_y[count_offset] == offset.y;
+				count_xy[count_offset] == count_time_image;
+
+				count_offset++;
+			}
+			else if (count_offset = 5)
+			{
+				count_offset = 0;
+				if_offset_x_y_full = 1;
+			}
+			else
+			{
+				count_offset = 0;
+			}
+
+
+ 			/*ready to get new target***/
+			if (arrive_flag == 1)
+			{
+				arrive_flag = 0;
+            	target_has_updated = 1;
+
+				//adjust with the camera install delta dis
+	            offset.x -= CAM_INSTALL_DELTA_X;
+	            offset.y -= CAM_INSTALL_DELTA_Y;
+	            
+	            x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+	            y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
+	            
+	            // limit the cam diff
+	            // add on 01-23
+	            if( x_camera_diff_with_roll > 0 )
+	            {
+	                if( x_camera_diff_with_roll > 1 )
+	                    x_camera_diff_with_roll = 1.0;
+	            }
+	            else
+	            {
+	                if( x_camera_diff_with_roll < (0 - 1) )
+	                    x_camera_diff_with_roll = 0 - 1.0;
+	            }
+	            
+	            
+	            if( y_camera_diff_with_pitch > 0 )
+	            {
+	                if( y_camera_diff_with_pitch > 1 )
+	                    y_camera_diff_with_pitch = 1.0;
+	            }
+	            else
+	            {
+	                if( y_camera_diff_with_pitch < (0 - 1) )
+	                    y_camera_diff_with_pitch = 0 - 1.0;
+	            }
+	            
+	            offset_adjust.x = offset.x - x_camera_diff_with_roll;
+	            offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+	            
+	            set_log_offset_adjust(offset_adjust);
+	            
+	            //set the target with the image target with xyz
+	            cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
+	            cur_target_xyz.y = offset_adjust.x; 			//add east offset
+	            
+	            
+	            target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+	            //add limit to current target, the step is 3m
+	            if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+	            {
+	                cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+	                cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
+	            }
+	            
+	            integration_count_xy = 0;
+	            
+	            cxyz_no_gps.x = 0;
+	            cxyz_no_gps.y = 0;
+
+				/*use the image velocity*/
+				if (count_time_offset_flag == 1 && if_offset_x_y_full == 1)
+				{
+					if ((count_offset-2) >= 0)
+					{
+						vel_x_image = (offset_y[count_offset-2] - offset_y[count_offset]) / (DT * (count_xy[count_offset]-count_xy[count_offset-2]));
+						vel_y_image = (offset_x[count_offset] - offset_x[count_offset-2]) /  (DT * (count_xy[count_offset]-count_xy[count_offset-2]));
+					}
+					else
+					{
+						vel_x_image = (offset_y[count_offset  -2 + 5] - offset_y[count_offset]) / (DT * (count_xy[count_offset]-count_xy[count_offset - 2 + 5]));
+						vel_y_image = (offset_x[count_offset] - offset_x[count_offset - 2 + 5]) /  (DT * (count_xy[count_offset]-count_xy[count_offset - 2 + 5]));
+					}
+
+					count_time_offset_flag = 0;
+					if_offset_x_y_full = 0;
+					count_offset = 0;
+					count_time_image = 0;
+
+					
+					cvel_no_gps.x = vel_x_image;// add by zhanglei 0226
+					cvel_no_gps.y = vel_y_image;
+
+				}
+				else
+				{
+					cvel_no_gps.x = 0;
+					cvel_no_gps.y = 0;
+					printf("Not Get Image Velocity!\n");
+				}
+
+				/*Close to target*/
+				if (fabs(cur_target_xyz.x) < 0.3)
+				{
+					cvel_no_gps.x = 0;
+				}
+				if (fabs(cur_target_xyz.y) < 0.3)
+				{
+					cvel_no_gps.y = 0;
+				}
+
+				//cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+	            //cvel_no_gps.y = _cvel.y;
+	            
+			}
             
-            //adjust with the camera install delta dis
-            offset.x -= CAM_INSTALL_DELTA_X;
-            offset.y -= CAM_INSTALL_DELTA_Y;
-            
-            x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-            y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);		// modified to use the Height not use offset.z by zl, 0113
-            
-            // limit the cam diff
-            // add on 01-23
-            if( x_camera_diff_with_roll > 0 )
-            {
-                if( x_camera_diff_with_roll > 1 )
-                    x_camera_diff_with_roll = 1.0;
-            }
-            else
-            {
-                if( x_camera_diff_with_roll < (0 - 1) )
-                    x_camera_diff_with_roll = 0 - 1.0;
-            }
-            
-            
-            if( y_camera_diff_with_pitch > 0 )
-            {
-                if( y_camera_diff_with_pitch > 1 )
-                    y_camera_diff_with_pitch = 1.0;
-            }
-            else
-            {
-                if( y_camera_diff_with_pitch < (0 - 1) )
-                    y_camera_diff_with_pitch = 0 - 1.0;
-            }
-            
-            offset_adjust.x = offset.x - x_camera_diff_with_roll;
-            offset_adjust.y = offset.y - y_camera_diff_with_pitch;
-            
-            set_log_offset_adjust(offset_adjust);
-            
-            //set the target with the image target with xyz
-            cur_target_xyz.x = (-1) * (offset_adjust.y); 	//add north offset
-            cur_target_xyz.y = offset_adjust.x; 			//add east offset
-            
-            
-            target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
-            //add limit to current target, the step is 3m
-            if (target_dist > MAX_EACH_DIS_IMAGE_GET_CLOSE)
-            {
-                cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
-                cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));
-            }
-            
-            integration_count_xy = 0;
-            
-            cxyz_no_gps.x = 0;
-            cxyz_no_gps.y = 0;
-            
-            cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
-            cvel_no_gps.y = _cvel.y;
 
         }
-        
+
+
         
         /*Integration from Accelerat data*/
         DJI_Pro_Get_GroundAcc(&g_acc);
@@ -981,9 +1127,10 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             
             cur_target_xyz.x = 0;
             cur_target_xyz.y = 0;
-            
-            cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
-            cvel_no_gps.y = _cvel.y;
+
+            // del 0226
+            //cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
+            //cvel_no_gps.y = _cvel.y;
             
             target_dist = 0;
             printf("deliver xy integration time out\n");
@@ -1025,11 +1172,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         
         last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
         
-        if (last_dis_to_mark < (target_dist * 0.25) )
+        if (last_dis_to_mark < (target_dist * 0.75) )
         {
             printf("last_dis_to_mark is %f\n", last_dis_to_mark);
             target_has_updated = 0;
-            integration_count_xy = 100;
+            integration_count_xy = 100;// when get target, no image, stop first wait image
             arrive_flag = 1;
         }
         
@@ -1038,60 +1185,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
         
         /*under 3.5m use ultra height, launch the retrun timeout, enter once*/
-		/*judge the height really below 3.5m*/
-		if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0 )
-		{
-			ultra_arr[count_ultra_low] = ultra_height;
-			printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
-			if(count_ultra_low == 0)
-			{
-				count_ultra_low++;
-			}
-			
-			else if(count_ultra_low > 0 && ultra_arr[count_ultra_low] <=ultra_arr[count_ultra_low-1] && ultra_arr[count_ultra_low]!=0)
-			{
-				count_ultra_low++;
-				
-			}
-			else
-			{
-				count_ultra_low = 0;
-			}
-			
-			if(count_ultra_low >= 5)
-			{
-				count_ultra_low = 0;
-				ultra_height_is_low = 1;
-			}
-		}
 
-		if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 )
-		{
-			image_arr[count_image_low] = offset.z;
-			printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
-			if(count_image_low == 0)
-			{
-				count_image_low++;
-			}
-			
-			else if(count_image_low > 0 && ultra_arr[count_image_low] < ultra_arr[count_image_low-1] && ultra_arr[count_image_low]!=0)
-			{
-				count_image_low++;
-			}
-			else
-			{
-				count_image_low = 0;
-			}
-			
-			if(count_image_low >= 5)
-			{
-				count_image_low = 0;
-				image_height_is_low = 1;
-			}
-		}
-
-		
-		if (( ultra_height_is_low == 1 || ultra_height_is_low == 1 ) && _cpos.height < 10.0 && ultra_height_use_flag ==0 )
+		if (( ultra_height_is_low == 1 || image_height_is_low == 1 ) && _cpos.height < 10.0 && ultra_height_use_flag ==0 )
         {			
             ultra_height_use_flag = 1;
             return_timeout_flag = 1;
@@ -1635,7 +1730,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 	            if(ultra_height > 2.5 && ultra_z_2_5_flag != 1)
 	            {
 	                cvel_no_gps.z = _cvel.z;
-	                cxyz_no_gps.z = offset.z;
+	                cxyz_no_gps.z = ultra_height;
 	            }
 
 			}
@@ -1669,6 +1764,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
             
             offset.x = offset.x / 100;
             offset.y = offset.y / 100;
+			offset.z = offset.z / 100;
             
             //adjust with the camera install delta dis
             offset.x -= CAM_INSTALL_DELTA_X;
