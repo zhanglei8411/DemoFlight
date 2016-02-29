@@ -15,14 +15,16 @@
 
 /*move xy para*/
 #define HOVER_POINT_RANGE 				(0.1)	//FP use
-#define TRANS_TO_HOVER_DIS 				(13.0) 	// for P2P trans to FP
+#define TRANS_TO_HOVER_DIS 				(13.0) 	// for P2P trans to FP, can del
 #define P2P_MAX_VEL_N_E					(3.0)
 
-/*ultra para*/
+/*ultra para for z*/
 #define ULTRA_INSTALL_HEIGHT            (0.135) //install diff of ultrasonic equip, 0.135m
 #define HEIGHT_TO_USE_ULTRA				(3.5)	//0221 (5.0 to 3.5)
+#define DEPTH_ULTRA_Z_VEL_CAL			10		//the depth of the data queue of ultra data which is used to cal the z velocity, max is 10
+#define SEPT_TIMES_FOR_CAL_Z_VEL		5		//the time of period of ultra data between two data to cal the velocity
 
-/*image para*/
+/*image para for xy*/
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
 #define DIS_DIFF_WITH_MARK_HOVER		(1.5)	//hover to get close to the image, due to the high height, the dis is large
 
@@ -32,15 +34,12 @@
 #define CAM_INSTALL_DELTA_Y				(0.218)	//m,add to offset camera y, down to see drone, y is down, the drone center is y+
 
 #define DEPTH_IMAGE_XY_CAL				5		//the depth of the data queue of image xy data which is used to cal the xy velocity, max is 5
-#define SEPT_TIMES_FOR_CAL				2		//the times of period of image data between two data to cal the velocity
+#define SEPT_TIMES_FOR_CAL_XY_VEL		2		//the times of period of image data between two data to cal the velocity
 
 #define MAX_CAM_DIFF_ADJUST				(1.0)	//use for offset_adjust cal
 #define GPS_OK_FOR_USE					6		//if gps health from inner controller is bigger than this value, the gps vel can be use
 
-/*
-#define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use
-#define MIN_ANGLE_TO_GET_IMAGE  		(4.0)
-*/
+
 
 typedef XYZ Center_xyz;
 
