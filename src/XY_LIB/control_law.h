@@ -31,6 +31,12 @@
 #define CAM_INSTALL_DELTA_X				(0.0)	//m,add to offset camera x, down to see drone, x is right 
 #define CAM_INSTALL_DELTA_Y				(0.218)	//m,add to offset camera y, down to see drone, y is down, the drone center is y+
 
+#define DEPTH_IMAGE_XY_CAL				5		//the depth of the data queue of image xy data which is used to cal the xy velocity, max is 5
+#define SEPT_TIMES_FOR_CAL				2		//the times of period of image data between two data to cal the velocity
+
+#define MAX_CAM_DIFF_ADJUST				(1.0)	//use for offset_adjust cal
+#define GPS_OK_FOR_USE					4		//if gps health from inner controller is bigger than this value, the gps vel can be use
+
 /*
 #define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use
 #define MIN_ANGLE_TO_GET_IMAGE  		(4.0)
