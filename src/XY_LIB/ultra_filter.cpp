@@ -156,7 +156,7 @@ void ultra_calc(Queue *pq)
 
 void ultra_height_filter(Queue *pq,float data,float *filter_data)
 {
-	printf("data is %.4f\n",data);
+	//printf("data is %.4f\n",data);
 	if(!ultra_queue_full(pq))
    	{
         push_queue(pq,data);
@@ -166,7 +166,7 @@ void ultra_height_filter(Queue *pq,float data,float *filter_data)
    	{
         ultra_calc(pq);
 		Get_calced_Ultra(pq,filter_data);
-		printf("filter_data is %.4f\n",*filter_data);
+		//printf("filter_data is %.4f\n",*filter_data);
         queue_pop(pq);                            
         //printf("_calc_ultra_data is %.4f\n",_calc_ultra_data);
    	}

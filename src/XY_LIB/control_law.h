@@ -35,7 +35,7 @@
 #define SEPT_TIMES_FOR_CAL				2		//the times of period of image data between two data to cal the velocity
 
 #define MAX_CAM_DIFF_ADJUST				(1.0)	//use for offset_adjust cal
-#define GPS_OK_FOR_USE					4		//if gps health from inner controller is bigger than this value, the gps vel can be use
+#define GPS_OK_FOR_USE					6		//if gps health from inner controller is bigger than this value, the gps vel can be use
 
 /*
 #define MIN_VEL_TO_GET_IMAGE			(0.3)	//the limit for image to use

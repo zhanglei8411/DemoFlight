@@ -740,9 +740,10 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
     int count_image_low = 0;
 	int image_height_is_low = 0;
 	int count_time_offset_flag = 0;
-	int count_offset = 0;
+	int count_offset = 0, count_offset_current = 0;
 	int if_offset_x_y_ready = 0;
-	float offset_x[5] = {} , offset_y[5] = {}, count_xy[5] = {};//max is 5, due to DEPTH_IMAGE_XY_CAL
+	float offset_x[5] = {} , offset_y[5] = {};
+	int count_xy[5] = {};//max is 5, due to DEPTH_IMAGE_XY_CAL
 	int count_time_image = 0;
 	float vel_x_image, vel_y_image;
 	
@@ -813,14 +814,14 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         
         if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
-        	printf("ultra_tmp is %.4f\n",ultra_tmp);
+        	//printf("ultra_tmp is %.4f\n",ultra_tmp);
         	ultra_height_filter(pq,ultra_tmp,&ultra_height);
 
 			/*judge the height really below 3.5m*/
 			if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0 && _cpos.height < 10.0 )
 			{
 				ultra_arr[count_ultra_low] = ultra_height;
-				printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
+				//printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
 				if(count_ultra_low == 0)
 				{
 					count_ultra_low++;
@@ -847,7 +848,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			if (ultra_height != 0)
 			{
 				ultra_height -= ULTRA_INSTALL_HEIGHT;
-	            printf("ultra_B is %.4f\n",ultra_height);
+	           // printf("ultra_B is %.4f\n",ultra_height);
 	            if(ultra_height < 8.0)	// only below 8m the ultra data begin used.
 	            {
 	                cxyz_no_gps.z = ultra_height;
@@ -862,7 +863,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	                    ultra_z_3_0_flag = 1;
 	                    count_time_integration_flag = 1;
 	                    ultra_z1 = ultra_height;
-	                    printf("                                                    ultra_z1 is %f\n", ultra_z1);
+	                    //printf("                                                    ultra_z1 is %f\n", ultra_z1);
 	                }
 	                
 	                if ( (ultra_height < 2.5 && ultra_height > 2.0) && ultra_z_2_5_flag == 0 && ultra_z_3_0_flag == 1)
@@ -872,7 +873,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	                    ultra_z2 = ultra_height;
 	                    cxyz_no_gps.z = ultra_height;
 	                    cvel_no_gps.z = _cvel.z;
-	                    printf("                                                   ultra_z2 is %f\n", ultra_z2);
+	                    //printf("                                                   ultra_z2 is %f\n", ultra_z2);
 	                }
 	            }
 	            
@@ -931,7 +932,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 && _cpos.height < 10.0 )
 			{
 				image_arr[count_image_low] = offset.z;
-				printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
+				//printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
 				if(count_image_low == 0)
 				{
 					count_image_low++;
@@ -961,19 +962,14 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				offset_x[count_offset] = offset.x;
 				offset_y[count_offset] = offset.y;
 				count_xy[count_offset] = count_time_image;
-
+				printf("offset_x[%d]=%f,offset_y[%d]=%f\n",count_offset,offset_x[count_offset],count_offset,offset_y[count_offset]);
 				count_offset++;
 			}
-			else if (count_offset = DEPTH_IMAGE_XY_CAL)
+			if (count_offset == DEPTH_IMAGE_XY_CAL)
 			{
 				count_offset = 0;
 				if_offset_x_y_ready = 1;
 			}
-			else
-			{
-				count_offset = 0;
-			}
-
 
  			/*ready to get new target***/
 			if (arrive_flag == 1)
@@ -1046,15 +1042,27 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					/*****use the image velocity---- add by zhanglei 0226***/
 					if (if_offset_x_y_ready == 1)
 					{
-						if ((count_offset - SEPT_TIMES_FOR_CAL) >= 0)
+						if ( count_offset==0 )
 						{
-							vel_x_image = (offset_y[count_offset - SEPT_TIMES_FOR_CAL] - offset_y[count_offset]) / (DT * (count_xy[count_offset]-count_xy[count_offset - SEPT_TIMES_FOR_CAL]));
-							vel_y_image = (offset_x[count_offset] - offset_x[count_offset - SEPT_TIMES_FOR_CAL]) /	(DT * (count_xy[count_offset]-count_xy[count_offset - SEPT_TIMES_FOR_CAL]));
+							count_offset_current = DEPTH_IMAGE_XY_CAL - 1;
 						}
 						else
 						{
-							vel_x_image = (offset_y[count_offset  - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL] - offset_y[count_offset]) / (DT * (count_xy[count_offset]-count_xy[count_offset - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]));
-							vel_y_image = (offset_x[count_offset] - offset_x[count_offset - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]) /  (DT * (count_xy[count_offset]-count_xy[count_offset - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]));
+							count_offset_current = count_offset - 1;
+						}
+						
+						
+						if ((count_offset_current - SEPT_TIMES_FOR_CAL) >= 0)
+						{
+							vel_x_image = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL]));
+							vel_y_image = (offset_x[count_offset_current - SEPT_TIMES_FOR_CAL] - offset_x[count_offset_current]) /	(DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL]));
+							printf("count_offset_current=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL], _cvel.x, _cvel.y);
+						}
+						else
+						{
+							vel_x_image = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]));
+							vel_y_image = (offset_x[count_offset_current - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL] - offset_x[count_offset_current]) /  (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL]));
+							printf("count_offset_current<2=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL + DEPTH_IMAGE_XY_CAL], _cvel.x, _cvel.y);
 						}
 	
 						count_time_offset_flag = 0;
@@ -1074,17 +1082,17 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						printf("USE GPS Velocity to Control! Height: %.4f \n", _cpos.height);
 					}
 					
-#ifdef 1
+#if 0
 					/***********Close to target, set vel to zero-------add by zhanglei 0226***********/
 					if (fabs(cur_target_xyz.x) < 0.3)
 					{
 						cvel_no_gps.x = 0;
-						printf("IMAGE target x is very close! x = %.4f", cur_target_xyz.x );
+						printf("IMAGE target x is very close! x = %.4f\n", cur_target_xyz.x );
 					}
 					if (fabs(cur_target_xyz.y) < 0.3)
 					{
 						cvel_no_gps.y = 0;
-						printf("IMAGE target y is very close! y = %.4f", cur_target_xyz.y );
+						printf("IMAGE target y is very close! y = %.4f\n", cur_target_xyz.y );
 					}
 #endif
 
