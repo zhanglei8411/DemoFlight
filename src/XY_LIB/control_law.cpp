@@ -812,103 +812,114 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         
         if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
-        	//printf("ultra_tmp is %.4f\n",ultra_tmp);
-        	ultra_height_filter(pq,ultra_tmp,&ultra_height);	
-			ultra_height -= ULTRA_INSTALL_HEIGHT;
+        	printf("ultra_tmp is %.4f\n",ultra_tmp);
+        	ultra_height_filter(pq,ultra_tmp,&ultra_height);
 
-			/*******judge the height really below 3.5m, enter once ******/
-			if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height > 0 && _cpos.height < 10.0 && ultra_height_is_low == 0)
-			{
-				ultra_arr[count_ultra_low] = ultra_height;
-				//printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
-				if(count_ultra_low == 0)
+			if ( 0 < ultra_height && 10.0 > ultra_height )
+			{	
+				ultra_height -= ULTRA_INSTALL_HEIGHT;
+
+				cxyz_no_gps.z = ultra_height;
+				integration_count_z = 0;
+
+				/*******judge the height really below 3.5m, enter once ******/
+				if (ultra_height < HEIGHT_TO_USE_ULTRA && _cpos.height < 10.0 && ultra_height_is_low == 0)
 				{
-					count_ultra_low++;
-				}
-				
-				else if(count_ultra_low > 0 && ultra_arr[count_ultra_low] < ultra_arr[count_ultra_low - 1] && ultra_arr[count_ultra_low] != 0)
-				{
-					count_ultra_low++;
+					ultra_arr[count_ultra_low] = ultra_height;
+					printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
+					if(count_ultra_low == 0)
+					{
+						count_ultra_low++;
+					}
 					
-				}
-				else
-				{
-					count_ultra_low = 0;
-				}
-				
-				if(count_ultra_low >= 5)
-				{
-					count_ultra_low = 0;
-					ultra_height_is_low = 1;
-				}
-			}
-
-
-			/*****Below 3.5m to cal vertical velocity********/		
-			if ( ultra_height_is_low == 1)
-			{			
-				if ( count_ultra < DEPTH_ULTRA_Z_VEL_CAL && count_ultra >= 0)
-				{
-					count_time_ultra_flag = 1;
+					else if(count_ultra_low > 0 && ultra_arr[count_ultra_low] < ultra_arr[count_ultra_low - 1] && ultra_arr[count_ultra_low] != 0)
+					{
+						count_ultra_low++;
+						
+					}
+					else
+					{
+						count_ultra_low = 0;
+					}
 					
-					ultra_z[count_ultra] = ultra_height;
-					count_z[count_ultra] = count_time_ultra;
-					printf("ultra[%d]=%.4f,count_z[%d]=%d\n",count_ultra,ultra_z[count_ultra],count_ultra,count_z[count_ultra]);
-					count_ultra++;
+					if(count_ultra_low >= 5)
+					{
+						count_ultra_low = 0;
+						ultra_height_is_low = 1;
+					}
 				}
-				if (count_ultra == DEPTH_ULTRA_Z_VEL_CAL)
-				{
-					count_ultra = 0;
-					if_ultra_z_ready = 1;
-				}
-	
-			}
 
-			/*********under 3.5m, and ultra data is ready, update the z vel with the ultra height*********/
-			if ( ultra_height_is_low == 1 )
-			{
-				if ( if_ultra_z_ready == 1 )
+
+				/*****Below 3.5m to cal vertical velocity********/		
+				if ( ultra_height_is_low == 1)
 				{			
-					if ( count_ultra == 0 )
+					if ( count_ultra < DEPTH_ULTRA_Z_VEL_CAL && count_ultra >= 0)
 					{
-						count_ultra_current = DEPTH_ULTRA_Z_VEL_CAL - 1;
+						count_time_ultra_flag = 1;
+						
+						ultra_z[count_ultra] = ultra_height;
+						count_z[count_ultra] = count_time_ultra;
+						printf("ultra[%d]=%.4f,count_z[%d]=%d\n",count_ultra,ultra_z[count_ultra],count_ultra,count_z[count_ultra]);
+						count_ultra++;
+					}
+					if (count_ultra == DEPTH_ULTRA_Z_VEL_CAL)
+					{
+						count_ultra = 0;
+						if_ultra_z_ready = 1;
+					}
+		
+				}
+
+				/*********under 3.5m, and ultra data is ready, update the z vel with the ultra height*********/
+				if ( ultra_height_is_low == 1 )
+				{
+					if ( if_ultra_z_ready == 1 )
+					{			
+						if ( count_ultra == 0 )
+						{
+							count_ultra_current = DEPTH_ULTRA_Z_VEL_CAL - 1;
+						}
+						else
+						{
+							count_ultra_current = count_ultra - 1;
+						}
+						
+						
+						if ((count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL) >= 0)
+						{
+							vel_z_ultra = (-1) * (ultra_z[count_ultra_current] - ultra_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL]) / (DT * (count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL]));
+							printf("count_ultra_current=%d,vel_z_ultra=%.8f,count_z_delta=%d,gps_vz=%.4f\n",count_ultra_current,vel_z_ultra,count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL], _cvel.z);
+						}
+						else
+						{	
+							vel_z_ultra = (-1) * (ultra_z[count_ultra_current] - ultra_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]) / (DT * (count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]));
+							printf("count_ultra_current=%d,vel_z_ultra=%.8f,count_z_delta=%d,gps_vz=%.4f\n",count_ultra_current,vel_z_ultra,count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL], _cvel.z);
+						}
+					
+						count_time_ultra_flag = 0;
+						if_ultra_z_ready = 0;
+						count_ultra = 0;
+						count_time_ultra = 0;			
+						
+						cvel_no_gps.z = vel_z_ultra;
+						
 					}
 					else
 					{
-						count_ultra_current = count_ultra - 1;
+						cvel_no_gps.z = _cvel.z;
+						printf("USE GPS Z Velocity to Control! Height: %.4f \n", _cpos.height);
 					}
-					
-					
-					if ((count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL) >= 0)
-					{
-						vel_z_ultra = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL_Z_VEL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_Z_VEL]));
-						printf("count_ultra_current=%d,vel_z_ultra=%.4f,count_z_delta=%d,gps_vz=%.4f\n",count_ultra_current,vel_z_ultra,count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL], _cvel.z);
-					}
-					else
-					{	
-						vel_z_ultra = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]));
-						printf("count_ultra_current=%d,vel_z_ultra=%.4f,count_z_delta=%d,gps_vz=%.4f\n",count_ultra_current,vel_z_ultra,count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL], _cvel.z);
-					}
-				
-					count_time_ultra_flag = 0;
-					if_ultra_z_ready = 0;
-					count_ultra = 0;
-					count_time_ultra = 0;			
-					
-					cvel_no_gps.z = vel_z_ultra;
+
+					cxyz_no_gps.z = ultra_height;
+					integration_count_z = 0;
 					
 				}
 				else
 				{
 					cvel_no_gps.z = _cvel.z;
-					printf("USE GPS Z Velocity to Control! Height: %.4f \n", _cpos.height);
+	                cxyz_no_gps.z = ultra_height;
 				}
 				
-			}
-			else
-			{
-				cvel_no_gps.z = _cvel.z;
-                cxyz_no_gps.z = ultra_height;
 			}
             
         }
@@ -1100,20 +1111,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						cvel_no_gps.x = _cvel.x;
 						cvel_no_gps.y = _cvel.y;
 						printf("USE GPS XY Velocity to Control! Height: %.4f \n", _cpos.height);
-					}
+					}					
 					
-					/***********Close to target, set vel to zero-------add by zhanglei 0226***********/
-					if (fabs(cur_target_xyz.x) < 0.3)
-					{
-						cvel_no_gps.x = 0;
-						printf("IMAGE target x is very close! x = %.4f\n", cur_target_xyz.x );
-					}
-					if (fabs(cur_target_xyz.y) < 0.3)
-					{
-						cvel_no_gps.y = 0;
-						printf("IMAGE target y is very close! y = %.4f\n", cur_target_xyz.y );
-					}
-
 				}
 				else
 				{
@@ -1156,8 +1155,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             cur_target_xyz.y = 0;
 
             // del 0226
-            //cvel_no_gps.x = _cvel.x;//get current velocity, modi by zhanglei 0117
-            //cvel_no_gps.y = _cvel.y;
+            cvel_no_gps.x = 0;//get current velocity, modi by zhanglei 0117
+            cvel_no_gps.y = 0;
             
             target_dist = 0;
             printf("deliver xy integration time out\n");
@@ -1203,9 +1202,9 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         if (last_dis_to_mark < (target_dist * 0.75) )
         {
             printf("last_dis_to_mark is %f\n", last_dis_to_mark);
-            if ( integration_count_xy < 85 )
+            if ( integration_count_xy < 100 )
             {
-            	integration_count_xy = 85;// when get target, no image, keep last state for 15 period, 300ms to wait image
+            	integration_count_xy = 100;// when get target, no image, keep last state for 15 period, 300ms to wait image
             	printf("Keep 300ms to wait image!\n");
             }
             arrive_flag = 1;

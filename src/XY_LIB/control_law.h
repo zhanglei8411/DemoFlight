@@ -21,8 +21,8 @@
 /*ultra para for z*/
 #define ULTRA_INSTALL_HEIGHT            (0.135) //install diff of ultrasonic equip, 0.135m
 #define HEIGHT_TO_USE_ULTRA				(3.5)	//0221 (5.0 to 3.5)
-#define DEPTH_ULTRA_Z_VEL_CAL			10		//the depth of the data queue of ultra data which is used to cal the z velocity, max is 10
-#define SEPT_TIMES_FOR_CAL_Z_VEL		5		//the time of period of ultra data between two data to cal the velocity
+#define DEPTH_ULTRA_Z_VEL_CAL			6		//the depth of the data queue of ultra data which is used to cal the z velocity, max is 10
+#define SEPT_TIMES_FOR_CAL_Z_VEL		3		//the time of period of ultra data between two data to cal the velocity
 
 /*image para for xy*/
 #define DIS_DIFF_WITH_MARK				(0.10)	//image FP & image down use
@@ -37,7 +37,7 @@
 #define SEPT_TIMES_FOR_CAL_XY_VEL		2		//the times of period of image data between two data to cal the velocity
 
 #define MAX_CAM_DIFF_ADJUST				(1.0)	//use for offset_adjust cal
-#define GPS_OK_FOR_USE					6		//if gps health from inner controller is bigger than this value, the gps vel can be use
+#define GPS_OK_FOR_USE					4		//if gps health from inner controller is bigger than this value, the gps vel can be use
 
 
 
