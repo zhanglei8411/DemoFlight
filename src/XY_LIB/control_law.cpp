@@ -805,14 +805,14 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             
             if(return_timeout >= (((HEIGHT_TO_USE_ULTRA-(DELIVER_HEIGHT_OF_DOWNH2+DELIVER_THRESHOLD_OF_DOWN_TO_H2_OUT))/DELIVER_MIN_VEL_DOWN_TO_H2+0.05)/DT))
             {
-                printf("deliver down to h2 timeout return\n");
+                printf("Return timeout! Ready to drop!\n");
                 return 1;
             }
         }
         
         if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
-        	printf("ultra_tmp is %.4f\n",ultra_tmp);
+        	printf("ultra_raw=%.4f\n",ultra_tmp);
         	ultra_height_filter(pq,ultra_tmp,&ultra_height);
 
 			if ( 0 < ultra_height && 10.0 > ultra_height )
@@ -1148,26 +1148,28 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             arrive_flag = 1;		// add for get into update the target
             integration_count_xy = 0;
             
+            printf("deliver xy integration time out！x=%.4f,y=%.4f,int_vx=%.4f,int_vy=%.4f,gps_vx=%.4f,gps_vy=%.4f\n", cxyz_no_gps.x, cxyz_no_gps.y, cvel_no_gps.x, cvel_no_gps.y, _cvel.x, _cvel.y);
+            
             cxyz_no_gps.x = 0;
             cxyz_no_gps.y = 0;
             
             cur_target_xyz.x = 0;
             cur_target_xyz.y = 0;
 
-            // del 0226
-            cvel_no_gps.x = 0;//get current velocity, modi by zhanglei 0117
+            //  open and set vel to 0 @0301; del 0226
+            cvel_no_gps.x = 0;
             cvel_no_gps.y = 0;
             
             target_dist = 0;
-            printf("deliver xy integration time out\n");
+            
         }
 
         if(integration_count_z > 100) // 2 secend reset the integration.
         {
+            printf("deliver z integration time out！int_vz=%.4f,gps_vz=%.4f\n", cvel_no_gps.z, _cvel.z);
+            
             integration_count_z = 0;
             cvel_no_gps.z = _cvel.z;
-            
-            printf("deliver z integration time out\n");
         }
         
         /*Calcu the control value by integration position*/
@@ -1205,7 +1207,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             if ( integration_count_xy < 100 )
             {
             	integration_count_xy = 100;// when get target, no image, keep last state for 15 period, 300ms to wait image
-            	printf("Keep 300ms to wait image!\n");
+            	printf("Keep 0 ms to wait image!\n", );
             }
             arrive_flag = 1;
         }
