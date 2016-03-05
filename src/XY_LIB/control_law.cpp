@@ -746,6 +746,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	int count_z[10];//max is 10 for DEPTH_ULTRA_Z_VEL_CAL
 	int count_ultra = 0, count_ultra_current = 0;
 	int count_time_ultra_flag = 0, count_time_ultra = 0, if_ultra_z_ready = 0;	
+	int image_vel_update = 0, ultra_vel_update = 0;
 	
     DJI_Pro_Get_Pos(&_focus_point);
     DJI_Pro_Get_GroundVo(&_cvel);
@@ -766,7 +767,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
     
     cxyz_no_gps.x = 0;
     cxyz_no_gps.y = 0;
-    cxyz_no_gps.z = _focus_point.height;
+    cxyz_no_gps.z = 0;// set to 0, 0305 zhanglei
     
     cur_target_xyz.x = 0;
     cur_target_xyz.y = 0;
@@ -788,8 +789,15 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         DJI_Pro_Get_Pos(&_cpos);
         DJI_Pro_Get_GroundVo(&_cvel);
         DJI_Pro_Get_Quaternion(&_cquaternion);
-                
-        
+
+		
+        /*under 3.5m  launch the retrun timeout, enter once*/
+		if ( (ultra_height_is_low == 1 || image_height_is_low == 1) && return_timeout_flag == 0 )
+		{
+			return_timeout_flag = 1;
+            printf("return time out start! ultra_low=%d,image_low=%d\n", ultra_height_is_low, image_height_is_low);
+		}
+		
         if( return_timeout_flag == 1 )
         {
             return_timeout++;
@@ -810,13 +818,19 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         	printf("ultra_raw=%.4f\n",ultra_tmp);
         	ultra_height_filter(pq,ultra_tmp,&ultra_height);
 
+			/*valid ultra data*/
 			if ( 0 < ultra_height && 10.0 > ultra_height )
 			{	
 				ultra_height -= ULTRA_INSTALL_HEIGHT;
 
-				cxyz_no_gps.z = ultra_height;
-				integration_count_z = 0;
+				/*start the ultra and integration control*/
+				if ( ultra_height_use_flag == 0 )
+				{			
+					ultra_height_use_flag = 1;
+					printf("Ultra & Integration control start! Height=%.4f Ultra=%.4f \n", _cpos.height, ultra_height);
+				}
 
+				
 				/*******judge the height really below 3.5m, enter once ******/
 				if (ultra_height < HEIGHT_TO_USE_ULTRA && _cpos.height < 10.0 && ultra_height_is_low == 0)
 				{
@@ -844,7 +858,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					}
 				}
 
-
+				
 				/*****Below 3.5m to cal vertical velocity********/		
 				if ( ultra_height_is_low == 1)
 				{			
@@ -856,6 +870,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						count_z[count_ultra] = count_time_ultra;
 						printf("ultra[%d]=%.4f,count_z[%d]=%d\n",count_ultra,ultra_z[count_ultra],count_ultra,count_z[count_ultra]);
 						count_ultra++;
+						ultra_vel_update = 1;
 					}
 					if (count_ultra == DEPTH_ULTRA_Z_VEL_CAL)
 					{
@@ -865,10 +880,24 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		
 				}
 
-				/*********under 3.5m, and ultra data is ready, update the z vel with the ultra height*********/
+				/*Update the vertical state for control
+				**1.set integration count 0
+				**2.update the height
+				**3.update the vertical velocity
+				***/
+				
+				integration_count_z = 0;
+				
+				cxyz_no_gps.z = ultra_height;
+				
+
+				/*Update vertical velocity
+				**1.higher than 3.5 use _cvel.z
+				**2.under 3.5m, and ultra update, use ultra velocity, not update use _cvel.z
+				***/
 				if ( ultra_height_is_low == 1 )
 				{
-					if ( if_ultra_z_ready == 1 )
+					if ( if_ultra_z_ready == 1 && ultra_vel_update == 1 )
 					{			
 						if ( count_ultra == 0 )
 						{
@@ -890,13 +919,16 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 							vel_z_ultra = (-1) * (ultra_z[count_ultra_current] - ultra_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]) / (DT * (count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL]));
 							printf("count_ultra_current=%d,vel_z_ultra=%.8f,count_z_delta=%d,gps_vz=%.4f\n",count_ultra_current,vel_z_ultra,count_z[count_ultra_current]-count_z[count_ultra_current - SEPT_TIMES_FOR_CAL_Z_VEL + DEPTH_ULTRA_Z_VEL_CAL], _cvel.z);
 						}
-					
-						count_time_ultra_flag = 0;
-						if_ultra_z_ready = 0;
-						count_ultra = 0;
-						count_time_ultra = 0;			
-						
+
+						//update with ultra vel						
 						cvel_no_gps.z = vel_z_ultra;
+					
+						//count_time_ultra_flag = 0;
+						//if_ultra_z_ready = 0;
+						//count_ultra = 0;
+						count_time_ultra = 0;
+						ultra_vel_update = 0;
+						
 						
 					}
 					else
@@ -904,15 +936,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						cvel_no_gps.z = _cvel.z;
 						printf("USE GPS Z Velocity to Control! Height: %.4f \n", _cpos.height);
 					}
-
-					cxyz_no_gps.z = ultra_height;
-					integration_count_z = 0;
 					
 				}
 				else
 				{
 					cvel_no_gps.z = _cvel.z;
-	                cxyz_no_gps.z = ultra_height;
 				}
 				
 			}
@@ -930,7 +958,9 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 		{
 			count_time_image = 0;
 			count_offset = 0;	
-			if_offset_x_y_ready = 0;
+			if_offset_x_y_ready = 0;		
+			image_vel_update = 0;
+			printf("[WARNING]Calcu XY vel by image TIME OUT! Height=%.4f\n", _cpos.height);//0305 add
 		}
 
 		/**Calcu the Z vel by ultra***/		
@@ -944,6 +974,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			count_time_ultra = 0;
 			count_ultra = 0;	
 			if_ultra_z_ready = 0;
+			ultra_vel_update = 0;
+			printf("[WARNING]Calcu Zvel by ultra TIME OUT! Height=%.4f\n", _cpos.height);//0305 add
 		}
         
         
@@ -978,17 +1010,75 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					image_height_is_low = 1;
 				}
 			}
+
+			//cal the angle of Drone
+			roll_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
+								1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2) 	);
+			
+			pitch_rard	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1) 		);
+			
+			yaw_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
+								(-1.0) + (2.0) * (_cquaternion.q0 * _cquaternion.q0 + _cquaternion.q1 * _cquaternion.q1) 	);// modify based on the github onboard sdk programmingGuide
+			
+			//yaw_angle	= 180 / PI * yaw_rard;
+			//roll_angle	= 180 / PI * roll_rard;
+			//pitch_angle = 180 / PI * pitch_rard;
+
+			//adjust with the camera install delta dis
+			offset.x -= CAM_INSTALL_DELTA_X;
+			offset.y -= CAM_INSTALL_DELTA_Y;
+
+			//adjust the install angle of the camera, get camera actural angle
+			//roll_rard += (1.0)/180*PI;	//when the camera head rotation right, +, add the angle
+			//pitch_rard += (0.3)/180*PI; //when the camera head rotation up, +, add the angle
+			
+			x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+			y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
+			
+			// limit the cam diff
+			// add on 01-23
+			if( x_camera_diff_with_roll > 0 )
+			{
+				if( x_camera_diff_with_roll > MAX_CAM_DIFF_ADJUST )
+					x_camera_diff_with_roll = MAX_CAM_DIFF_ADJUST;
+			}
+			else
+			{
+				if( x_camera_diff_with_roll < (0 - MAX_CAM_DIFF_ADJUST) )
+					x_camera_diff_with_roll = 0 - MAX_CAM_DIFF_ADJUST;
+			}
+			
+			
+			if( y_camera_diff_with_pitch > 0 )
+			{
+				if( y_camera_diff_with_pitch > MAX_CAM_DIFF_ADJUST )
+					y_camera_diff_with_pitch = MAX_CAM_DIFF_ADJUST;
+			}
+			else
+			{
+				if( y_camera_diff_with_pitch < (0 - MAX_CAM_DIFF_ADJUST) )
+					y_camera_diff_with_pitch = 0 - MAX_CAM_DIFF_ADJUST;
+			}
+			
+			offset_adjust.x = offset.x - x_camera_diff_with_roll;
+			offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+
+			//save the offset_ad to sd card
+			set_log_offset_adjust(offset_adjust);
+
+			
 			
 			/*****get image offset to cal the XY velocity********/					
 			if(count_offset < DEPTH_IMAGE_XY_CAL && count_offset >= 0)
 			{
 				count_time_offset_flag = 1;
 				
-				offset_x[count_offset] = offset.x;
-				offset_y[count_offset] = offset.y;
+				offset_x[count_offset] = offset_adjust.x;
+				offset_y[count_offset] = offset_adjust.y;
 				count_xy[count_offset] = count_time_image;
 				printf("offset_x[%d]=%.4f,offset_y[%d]=%.4f\n",count_offset,offset_x[count_offset],count_offset,offset_y[count_offset]);
 				count_offset++;
+				image_vel_update = 1;
 			}
 			if (count_offset == DEPTH_IMAGE_XY_CAL)
 			{
@@ -996,68 +1086,15 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				if_offset_x_y_ready = 1;
 			}
 
+
+
  			/*ready to get new target***/
 			if (arrive_flag == 1)
 			{
-				if ( _cpos.health_flag >= GPS_OK_FOR_USE || if_offset_x_y_ready == 1)
+				if ( _cpos.health_flag >= GPS_OK_FOR_USE || ( if_offset_x_y_ready == 1 && image_vel_update == 1 ))
 				{
 				
 					arrive_flag = 0;
-
-					//cal the angle of Drone
-					roll_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
-										1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2) 	);
-					
-					pitch_rard	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1) 		);
-					
-					yaw_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
-										1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3) 	);
-					
-					//yaw_angle	= 180 / PI * yaw_rard;
-					//roll_angle	= 180 / PI * roll_rard;
-					//pitch_angle = 180 / PI * pitch_rard;
-
-					
-					//adjust with the camera install delta dis
-					offset.x -= CAM_INSTALL_DELTA_X;
-					offset.y -= CAM_INSTALL_DELTA_Y;
-
-					//adjust the install angle of the camera, get camera actural angle
-					//roll_rard += (1.0)/180*PI;	//when the camera head rotation right, +, add the angle
-					//pitch_rard += (0.3)/180*PI; //when the camera head rotation up, +, add the angle
-					
-					x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-					y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
-					
-					// limit the cam diff
-					// add on 01-23
-					if( x_camera_diff_with_roll > 0 )
-					{
-						if( x_camera_diff_with_roll > MAX_CAM_DIFF_ADJUST )
-							x_camera_diff_with_roll = MAX_CAM_DIFF_ADJUST;
-					}
-					else
-					{
-						if( x_camera_diff_with_roll < (0 - MAX_CAM_DIFF_ADJUST) )
-							x_camera_diff_with_roll = 0 - MAX_CAM_DIFF_ADJUST;
-					}
-					
-					
-					if( y_camera_diff_with_pitch > 0 )
-					{
-						if( y_camera_diff_with_pitch > MAX_CAM_DIFF_ADJUST )
-							y_camera_diff_with_pitch = MAX_CAM_DIFF_ADJUST;
-					}
-					else
-					{
-						if( y_camera_diff_with_pitch < (0 - MAX_CAM_DIFF_ADJUST) )
-							y_camera_diff_with_pitch = 0 - MAX_CAM_DIFF_ADJUST;
-					}
-					
-					offset_adjust.x = offset.x - x_camera_diff_with_roll;
-					offset_adjust.y = offset.y - y_camera_diff_with_pitch;
-					
-					set_log_offset_adjust(offset_adjust);
 					
 					//set the target with the image target with xyz
 					cur_target_xyz.x = (-1) * (offset_adjust.y);	//add north offset
@@ -1083,10 +1120,14 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					cxyz_no_gps.x = 0;
 					cxyz_no_gps.y = 0;
 	
-					/*****use the image velocity---- add by zhanglei 0226***/
-					if (if_offset_x_y_ready == 1)
+					/*use the image velocity---- add by zhanglei 0226
+					**1. update, use image vel
+					**2. not update, use gps vel
+					**3. gps is good, use gps vel
+					***/
+					if ( if_offset_x_y_ready == 1 && image_vel_update == 1 )
 					{
-						if ( count_offset==0 )
+						if ( count_offset == 0 )
 						{
 							count_offset_current = DEPTH_IMAGE_XY_CAL - 1;
 						}
@@ -1109,27 +1150,35 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 							printf("count_offset_current<2=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL], _cvel.x, _cvel.y);
 						}
 	
-						count_time_offset_flag = 0;
-						if_offset_x_y_ready = 0;
-						count_offset = 0;
+						//count_time_offset_flag = 0;
+						//if_offset_x_y_ready = 0;	//del 0305, if the array is full, always ready!
+						//count_offset = 0;
 						count_time_image = 0;
-	
+						image_vel_update = 0; //used current image data to cal vel
 						
 						cvel_no_gps.x = vel_x_image;
 						cvel_no_gps.y = vel_y_image;
 	
 					}
-					else
+					else if ( GPS_VERY_GOOD != _cpos.health_flag )
 					{
 						cvel_no_gps.x = _cvel.x;
 						cvel_no_gps.y = _cvel.y;
-						printf("USE GPS XY Velocity to Control! Height: %.4f \n", _cpos.height);
-					}					
+						printf("USE GPS(%d) XY Velocity to Control! Height: %.4f \n", _cpos.health_flag, _cpos.height);
+					}
+					
+					if ( _cpos.health_flag == GPS_VERY_GOOD )
+					{						
+						cvel_no_gps.x = _cvel.x;
+						cvel_no_gps.y = _cvel.y;
+						printf("USE GPS(%d) XY Velocity to Control! Height: %.4f \n", _cpos.health_flag, _cpos.height);
+					}
+					
 					
 				}
 				else
 				{
-					printf("GPS or IMAGE not ready for cal the xy vel--GPS: %d, IMAGE: %d \n", _cpos.health_flag, if_offset_x_y_ready);
+					printf("GPS or IMAGE not ready for cal the xy vel--GPS: %d, IMAGE: R%d U%d\n", _cpos.health_flag, if_offset_x_y_ready, image_vel_update);
 				}
 	            
 			}
@@ -1153,15 +1202,19 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         cvel_no_gps.z += g_acc.z * DT;
         
         integration_count_xy++;
-        integration_count_z++;
+		
+		if ( 1 == ultra_height_use_flag )
+		{
+			integration_count_z++;
+		}
         
         /*limit the time length of using no gps mode, add by zhanglei 0118*/
-        if(integration_count_xy > 100) // 2 secend reset the integration.
+        if( integration_count_xy > 100) // 2 secend reset the integration.
         {
             arrive_flag = 1;		// add for get into update the target
             integration_count_xy = 0;
             
-            printf("deliver xy integration time out！x=%.4f,y=%.4f,int_vx=%.4f,int_vy=%.4f,gps_vx=%.4f,gps_vy=%.4f\n", cxyz_no_gps.x, cxyz_no_gps.y, cvel_no_gps.x, cvel_no_gps.y, _cvel.x, _cvel.y);
+            printf("[WARNING] XY integration time out! x=%.4f,y=%.4f,int_vx=%.4f,int_vy=%.4f,gps_vx=%.4f,gps_vy=%.4f\n", cxyz_no_gps.x, cxyz_no_gps.y, cvel_no_gps.x, cvel_no_gps.y, _cvel.x, _cvel.y);
             
             cxyz_no_gps.x = 0;
             cxyz_no_gps.y = 0;
@@ -1169,17 +1222,23 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             cur_target_xyz.x = 0;
             cur_target_xyz.y = 0;
 
-            //  open and set vel to 0 @0301; del 0226
-            cvel_no_gps.x = 0;
-            cvel_no_gps.y = 0;
-            
+			//  del 0305, ;open and set vel to 0 @0301; del 0226
+			//cvel_no_gps.x = 0;
+            //cvel_no_gps.y = 0;
+			
+			if ( GPS_VERY_GOOD == _cpos.health_flag )
+			{
+				cvel_no_gps.x = _cvel.x;
+				cvel_no_gps.y = _cvel.y;
+			}
+       
             target_dist = 0;
             
         }
 
         if(integration_count_z > 100) // 2 secend reset the integration.
         {
-            printf("deliver z integration time out！int_vz=%.4f,gps_vz=%.4f\n", cvel_no_gps.z, _cvel.z);
+            printf("[WARNING] Z integration time out! int_vz=%.4f,gps_vz=%.4f\n", cvel_no_gps.z, _cvel.z);
             
             integration_count_z = 0;
             cvel_no_gps.z = _cvel.z;
@@ -1214,6 +1273,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         user_ctrl_data.pitch_or_y = y_e_vel;
 #endif
     /*--------TEMP DEL----------*/
+
+
         
     /*--------TEST ANGLE CONTROL 0303----------*/
         //use x_n_vel as pitch, use y_e_vel as roll
@@ -1244,7 +1305,6 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         user_ctrl_data.pitch_or_y = (-1.0) * x_n_vel;// 0304 add -1
 
 		printf("Roll_Y_E=%.4f, Pitch_X_N=%.4f, dx=%.4f,vx=%.4f,dy=%.4f,vy=%.4f\n",user_ctrl_data.roll_or_x, user_ctrl_data.pitch_or_y, cxyz_no_gps.x - cur_target_xyz.x, cvel_no_gps.x, cxyz_no_gps.y - cur_target_xyz.y, cvel_no_gps.y );
- 
         
     /*--------TEST ANGLE CONTROL 0303----------*/
 
@@ -1265,23 +1325,14 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         }
         
         /*------Height control------*/
+		
         /*normal use gps height*/
         user_ctrl_data.thr_z = _kp_z * (_t_height - _cpos.height); 
         
-        /*under 3.5m use ultra height, launch the retrun timeout, enter once*/
-
-		if (( ultra_height_is_low == 1 || image_height_is_low == 1 ) && _cpos.height < 10.0 && ultra_height_use_flag ==0 )
-        {			
-            ultra_height_use_flag = 1;
-            return_timeout_flag = 1;
-            printf("return time out start! ultra_low=%d,image_low=%d\n", ultra_height_is_low, image_height_is_low);
-        }
-        
-        
-        if ( ultra_height_use_flag == 1 )
+		/*if ultra data is ready, use ultra data and integration to control*/
+		if ( ultra_height_use_flag == 1 )
         {
             user_ctrl_data.thr_z = _kp_z * (_t_height - cxyz_no_gps.z ); 
-            //printf("cxyz_no_gps.z is %f\n", cxyz_no_gps.z);
         }
         
         /*limit the z vel*/
