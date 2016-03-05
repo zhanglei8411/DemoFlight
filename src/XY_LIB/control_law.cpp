@@ -749,8 +749,13 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	
     DJI_Pro_Get_Pos(&_focus_point);
     DJI_Pro_Get_GroundVo(&_cvel);
+    /*--------TEMP DEL----------*/
+    //user_ctrl_data.ctrl_flag = 0x40;
+    /*--------TEMP DEL----------*/
+    /*--------ANGLE CONTROL TEST 0303----------*/
+    user_ctrl_data.ctrl_flag = 0x00;
+    /*--------ANGLE CONTROL TEST----------*/
     
-    user_ctrl_data.ctrl_flag = 0x40;
     user_ctrl_data.yaw = 0;
     user_ctrl_data.roll_or_x = 0;
     user_ctrl_data.pitch_or_y = 0;
@@ -771,7 +776,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
     
     target_dist = 0;
 
-    //hover to FP, but lower kp to the FP without image
+	
+	//hover to FP, but lower kp to the FP without image
     k1d = 0.05;
     k1p = 0.1;	//simulation test 0113;adjust to 0.05,flight test ok 0114
     k2d = 0.05;
@@ -783,17 +789,6 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         DJI_Pro_Get_GroundVo(&_cvel);
         DJI_Pro_Get_Quaternion(&_cquaternion);
                 
-        roll_rard 	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
-                            1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2)		);
-        
-        pitch_rard 	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1)			);
-        
-        yaw_rard 	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
-                            1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3)		);
-        
-        yaw_angle 	= 180 / PI * yaw_rard;
-        roll_angle 	= 180 / PI * roll_rard;
-        pitch_angle = 180 / PI * pitch_rard;
         
         if( return_timeout_flag == 1 )
         {
@@ -1008,10 +1003,28 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				{
 				
 					arrive_flag = 0;
+
+					//cal the angle of Drone
+					roll_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
+										1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2) 	);
+					
+					pitch_rard	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1) 		);
+					
+					yaw_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
+										1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3) 	);
+					
+					//yaw_angle	= 180 / PI * yaw_rard;
+					//roll_angle	= 180 / PI * roll_rard;
+					//pitch_angle = 180 / PI * pitch_rard;
+
 					
 					//adjust with the camera install delta dis
 					offset.x -= CAM_INSTALL_DELTA_X;
 					offset.y -= CAM_INSTALL_DELTA_Y;
+
+					//adjust the install angle of the camera, get camera actural angle
+					//roll_rard += (1.0)/180*PI;	//when the camera head rotation right, +, add the angle
+					//pitch_rard += (0.3)/180*PI; //when the camera head rotation up, +, add the angle
 					
 					x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
 					y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
@@ -1172,6 +1185,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             cvel_no_gps.z = _cvel.z;
         }
         
+/*--------TEMP DEL----------*/
+#if 0
         /*Calcu the control value by integration position*/
         x_n_vel = - k1p * (cxyz_no_gps.x - cur_target_xyz.x) - k1d * (cvel_no_gps.x);
         y_e_vel = - k2p * (cxyz_no_gps.y - cur_target_xyz.y) - k2d * (cvel_no_gps.y);
@@ -1197,6 +1212,43 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         
         user_ctrl_data.roll_or_x = x_n_vel;
         user_ctrl_data.pitch_or_y = y_e_vel;
+#endif
+    /*--------TEMP DEL----------*/
+        
+    /*--------TEST ANGLE CONTROL 0303----------*/
+        //use x_n_vel as pitch, use y_e_vel as roll
+        //sim ok 0304, not flight test
+        x_n_vel = - (1.0) * (cxyz_no_gps.x - cur_target_xyz.x) - (4.0) * (cvel_no_gps.x);
+        y_e_vel = - (1.0) * (cxyz_no_gps.y - cur_target_xyz.y) - (4.0) * (cvel_no_gps.y);
+        
+        /*Limit the x y control value*/
+        if(x_n_vel > 10)
+        {
+            x_n_vel = 10;
+        }
+        else if(x_n_vel < (-1.0) * 10)
+        {
+            x_n_vel = (-1.0) * 10;
+        }
+        
+        if(y_e_vel > 10)
+        {
+            y_e_vel = 10;
+        }
+        else if(y_e_vel < (-1.0) * 10)
+        {
+            y_e_vel = (-1.0) * 10;
+        }
+        
+        user_ctrl_data.roll_or_x = y_e_vel;
+        user_ctrl_data.pitch_or_y = (-1.0) * x_n_vel;// 0304 add -1
+
+		printf("Roll_Y_E=%.4f, Pitch_X_N=%.4f, dx=%.4f,vx=%.4f,dy=%.4f,vy=%.4f\n",user_ctrl_data.roll_or_x, user_ctrl_data.pitch_or_y, cxyz_no_gps.x - cur_target_xyz.x, cvel_no_gps.x, cxyz_no_gps.y - cur_target_xyz.y, cvel_no_gps.y );
+ 
+        
+    /*--------TEST ANGLE CONTROL 0303----------*/
+
+        
         
         
         last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
@@ -1207,7 +1259,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             if ( integration_count_xy < 100 )
             {
             	integration_count_xy = 100;// when get target, no image, keep last state for 15 period, 300ms to wait image
-            	printf("Keep 0 ms to wait image!\n", );
+            	printf("Keep 0 ms to wait image!\n");
             }
             arrive_flag = 1;
         }
@@ -1704,18 +1756,6 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
         DJI_Pro_Get_GroundVo(&_cvel);
         DJI_Pro_Get_Quaternion(&_cquaternion);
 
-        roll_rard   = atan2(        2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
-                                    1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2)     );
-        
-        pitch_rard  = asin(         2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1)         );
-        
-        yaw_rard    = atan2(        2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
-                                    1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3)     );
-
-        yaw_angle   = 180 / PI * yaw_rard;
-        roll_angle  = 180 / PI * roll_rard;
-        pitch_angle = 180 / PI * pitch_rard;
-
         if(XY_Get_Ultra_Data(&ultra_tmp, ULTRA_GET_ID_B) == 0)
         {
         	ultra_height_filter(pq,ultra_tmp,&ultra_height);//add 0221 by juzheng
@@ -1798,10 +1838,24 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
             offset.x = offset.x / 100;
             offset.y = offset.y / 100;
 			offset.z = offset.z / 100;
+			
+			
+			roll_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q3),
+										1 - 2 * (_cquaternion.q1 * _cquaternion.q1 + _cquaternion.q2 * _cquaternion.q2) 	);
+			
+			pitch_rard	= asin( 		2 * (_cquaternion.q0 * _cquaternion.q2 - _cquaternion.q3 * _cquaternion.q1) 		);
+			
+			yaw_rard	= atan2(		2 * (_cquaternion.q0 * _cquaternion.q3 + _cquaternion.q1 * _cquaternion.q2),
+										1 - 2 * (_cquaternion.q2 * _cquaternion.q2 + _cquaternion.q3 * _cquaternion.q3) 	);
+
             
             //adjust with the camera install delta dis
             offset.x -= CAM_INSTALL_DELTA_X;
             offset.y -= CAM_INSTALL_DELTA_Y;
+
+			//adjust the install angle of the camera, get camera actural angle
+			roll_rard += (1.0)/180*PI;	//when the camera head rotation right, +, add the angle
+			pitch_rard += (0.3)/180*PI; //when the camera head rotation up, +, add the angle
 
             x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);       // modified to use the Height not use offset.z by zl, 0113
             y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);     // modified to use the Height not use offset.z by zl, 0113
