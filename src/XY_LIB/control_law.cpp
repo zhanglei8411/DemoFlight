@@ -975,7 +975,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			count_ultra = 0;	
 			if_ultra_z_ready = 0;
 			ultra_vel_update = 0;
-			printf("[WARNING]Calcu Zvel by ultra TIME OUT! Height=%.4f\n", _cpos.height);//0305 add
+			printf("[WARNING]Calcu Z vel by ultra TIME OUT! Height=%.4f\n", _cpos.height);//0305 add
 		}
         
         
