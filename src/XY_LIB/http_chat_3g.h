@@ -55,10 +55,8 @@ struct post_info{
 int XY_Http_Chat_Setup(void);
 int XY_Http_Reported_Setup(void);
 int create_link_in_http(void);
-static void *reported_data_thread_func(void * arg);
-static void *wait_order_thread_func(void * arg);
-int XY_Send_Http_Post_Request_Data(int seq, char *fmt, ...);
-char *get_order_id_from_json(void);
+int XY_Send_Http_Post_Request_Data(int seq, const char *fmt, ...);
+char* get_order_id_from_json(void);
 void set_order_status(void);
 int get_order_status(void);
 
@@ -69,12 +67,5 @@ void message_server_found_mark(void);
 void message_server_deliver_is_okay(void);
 void message_server_current_pos_of_drone(void);
 void enable_report_drone_pos(void);
-
-static void *keep_alive_thread_func(void * arg);
-static void *report_drone_pos_at_intervals_thread_func(void *arg);
-
-
-
-
 
 #endif

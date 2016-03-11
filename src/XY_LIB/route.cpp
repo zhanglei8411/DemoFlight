@@ -19,6 +19,17 @@ extern struct debug_info debug_package;
 
 int drone_goback = 0;
 
+static void *drone_deliver_task_thread_func(void * arg);
+static void *drone_deliver_up_thread_func(void * arg);
+static void *drone_deliver_p2p_thread_func(void * arg);
+static void *drone_deliver_down_thread_func(void * arg);
+
+
+static void *drone_goback_task_thread_func(void * arg);
+static void *drone_goback_up_thread_func(void * arg);
+static void *drone_goback_p2p_thread_func(void * arg);
+static void *drone_goback_down_thread_func(void * arg);
+
 int XY_Drone_Execute_Task(void)
 {
 	if( XY_Drone_Deliver_Task() < 0 )
@@ -32,7 +43,7 @@ int XY_Drone_Execute_Task(void)
 
 int XY_Drone_Deliver_Task(void)
 {
-	
+	printf("--------deliver_task--------\n");
 	if(XY_Create_Thread(drone_deliver_task_thread_func, NULL, THREADS_DELIVER, -1, SCHED_RR, 97) < 0)
 	{
 		printf("Create Drone Deliver Task Thread Error.\n");
@@ -61,8 +72,13 @@ static void *drone_deliver_task_thread_func(void * arg)
 {
 	int ret;
 	pthread_t tid;
-
-	temporary_init_deliver_route_list();
+	printf("--------init_deliver-------\n");
+	ret = temporary_init_deliver_route_list();
+	if(ret == -1)
+	{
+		perror("temporary_init_deliver_route_list");
+	}
+	
 	
 	if(deliver_route_head->next == NULL)
 	{
@@ -77,7 +93,11 @@ static void *drone_deliver_task_thread_func(void * arg)
 		//Up to H1
 		printf("----------------- take off -----------------\n");
 		XY_Debug_Send_At_Once("\n----------------- Take off -----------------\n");
-		ret = DJI_Pro_Status_Ctrl(4,0);			
+		ret = DJI_Pro_Status_Ctrl(4,0);	
+		if(-1 == ret)
+		{
+			perror("DJI_Pro_Status_Ctrl");
+		}
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
 		pthread_mutex_unlock(&mutex);
@@ -136,7 +156,11 @@ static void *drone_goback_task_thread_func(void * arg)
 	int ret;
 	pthread_t tid;
 
-	temporary_init_goback_route_list();
+	ret = temporary_init_goback_route_list();
+	if(ret == -1)
+	{
+		perror("temporary_init_goback_route_list");
+	}
 
 	if(goback_route_head->next == NULL)
 	{
@@ -185,6 +209,10 @@ static void *drone_goback_task_thread_func(void * arg)
 		//Landing
 		XY_Debug_Send_At_Once("\n----------------- Landing -----------------\n");
 		ret = DJI_Pro_Status_Ctrl(6,0);
+		if(-1 == ret)
+		{
+			perror("DJI_Pro_Status_Ctrl");
+		}
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond , &mutex);
 		pthread_mutex_unlock(&mutex);
@@ -222,6 +250,8 @@ int drone_deliver_up_to_h2(void)
 	
 	if( XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_deliver_up_to_h3(void)
@@ -237,6 +267,8 @@ int drone_deliver_up_to_h3(void)
 	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 static void *drone_deliver_up_thread_func(void * arg)
@@ -278,6 +310,8 @@ int drone_deliver_p2p(void)
 	p2p_height = DELIVER_HEIGHT_OF_UPH3;
 	if( XY_Ctrl_Drone_P2P_With_FP_COMMON(p2p_height, 0) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 
@@ -315,12 +349,16 @@ int drone_deliver_down_to_h1(void)
 	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_deliver_find_put_point_with_image(void)
 {
 	if( XY_Ctrl_Drone_Spot_Hover_And_Find_Put_Point_DELIVER() == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_deliver_down_to_h2(void)
@@ -336,6 +374,8 @@ int drone_deliver_down_to_h2(void)
 	
 	if( XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_deliver_down_to_h3(void)
@@ -351,12 +391,16 @@ int drone_deliver_down_to_h3(void)
 	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_deliver_spot_hover_and_put(void)
 {
 	if( XY_Ctrl_Drone_To_Spot_Hover_And_Put_DELIVER() == 1 )
 		return 1;
+	else 
+		return -1;
 }
 
 /*
@@ -446,14 +490,18 @@ int drone_goback_up_to_h2(void)
 	
 	if( XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_goback_up_to_h3(void)
 {
 	if( drone_deliver_up_to_h3() == 1)
 		return 1;
+	else 
+		return -1;
 }
-
+#if 1
 static void *drone_goback_up_thread_func(void * arg)
 {
 	XY_Start_Capture();
@@ -482,7 +530,7 @@ static void *drone_goback_up_thread_func(void * arg)
 	pthread_exit(NULL);
 	
 }
-
+#endif
 
 /* ============================================================================ */
 int drone_goback_p2p(void)
@@ -492,6 +540,8 @@ int drone_goback_p2p(void)
 	p2p_height = GOBACK_HEIGHT_OF_UPH3;
 	if( XY_Ctrl_Drone_P2P_With_FP_COMMON(p2p_height, 1) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 
@@ -526,12 +576,16 @@ int drone_goback_down_to_h1(void)
 	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_goback_find_put_point_with_image(void)
 {
 	if(drone_deliver_find_put_point_with_image() == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_goback_down_to_h2(void)
@@ -547,6 +601,8 @@ int drone_goback_down_to_h2(void)
 	
 	if( XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 
 int drone_goback_down_to_h3(void)
@@ -562,6 +618,8 @@ int drone_goback_down_to_h3(void)
 	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
+	else 
+		return -1;
 }
 /*
  *             ---
@@ -659,9 +717,6 @@ int temporary_init_deliver_route_list(void)
 {
 	int ret = 0;
 	static api_pos_data_t start_pos;
-	api_pos_data_t g_origin_pos;
-	XYZ g_origin_XYZ, start_XYZ;
-	Center_xyz g_origin_xyz, start_xyz,g_origin_xyz_app;
 	
 	deliver_route_head = create_head_node();
 	if(deliver_route_head == NULL)
@@ -681,37 +736,11 @@ int temporary_init_deliver_route_list(void)
 
 	set_leg_start_pos(&task_info, start_pos.longti, start_pos.lati, 0.100000);
 
-	//½«ÖÕµã×ø±ê×ªÎªµØÃæ×ø±êÏµ,zhanglei add 0111, not finish
-	//Ô­µãÔÚÓðÃ«Çò³¡Æð·Éµã
-	g_origin_pos.longti = ORIGIN_IN_HENGSHENG_LONGTI;
-	g_origin_pos.lati = ORIGIN_IN_HENGSHENG_LATI;
-	g_origin_pos.alti = ORIGIN_IN_HENGSHENG_ALTI;
-	
-	//´Ó´óµØ×ø±êÏµ×ª»»µ½ÇòÐÄ×ø±êÏµ
-	geo2XYZ(g_origin_pos, &g_origin_XYZ);
-	geo2XYZ(start_pos, &start_XYZ);
-
-	//´ÓÇòÐÄ×ø±êÏµ×ªµ½Õ¾ÐÄ×ø±êÏµ
-	XYZ2xyz(g_origin_pos, start_XYZ, &g_origin_xyz);
-	XYZ2xyz(g_origin_pos, start_XYZ, &start_xyz);
-
-	/*µØÃæ×ø±êÏµxÖáÏò±±£¬yÖáÏò¶«*/
-	g_origin_xyz_app.x=g_origin_xyz.x-DELTA_X_M_GOOGLEEARTH;  
-	g_origin_xyz_app.y=g_origin_xyz.y-DELTA_Y_M_GOOGLEEARTH;
-	g_origin_xyz_app.z=g_origin_xyz.z-DELTA_Z_M_GOOGLEEARTH;		
-	
-	XY_Debug_Send_At_Once("[g_origin_xyz.x %.3lf,g_origin_xyz.y %.3lf,g_origin_xyz.z %.3lf]\n", g_origin_xyz.x,g_origin_xyz.y,g_origin_xyz.z);
-	XY_Debug_Send_At_Once("[start_xyz.x %.3lf,start_xyz.y %.3lf,start_xyz.z %.3lf]\n", start_xyz.x,start_xyz.y,start_xyz.z);
-	XY_Debug_Send_At_Once("[g_origin_xyz_app.x %.3lf,g_origin_xyz_app.y %.3lf,g_origin_xyz_app.z %.3lf]\n", g_origin_xyz_app.x,g_origin_xyz_app.y,g_origin_xyz_app.z);
-	
-	//ÉèÖÃÖÕµãÎ»ÖÃ, not finish	
-	//set_leg_end_pos(&task_info, start_pos.longti - 0./Users/zhanglei/xunyi/DemoFlight/src/XY_LIB/control_law.cpp000001, start_pos.lati, 0.100000);// zhanglei 0109 from 1 to 2
-
 #if 0
 	set_leg_end_pos(&task_info, XYI_TERRACE_LONGTI, XYI_TERRACE_LATI, XYI_TERRACE_ALTI);
 #else
       extern cJSON *json;
-      set_leg_end_pos(&task_info,((cJSON_GetObjectItem(json, "lng")->valuedouble/180)*3.1415926), ((cJSON_GetObjectItem(json, "lat")->valuedouble/180)*3.1415926),ORIGIN_IN_HENGSHENG_ALTI);
+      set_leg_end_pos(&task_info,((( cJSON_GetObjectItem(json, "lng")->valuedouble - GD2GE_LONGTI_DIFF ) / 180) * PI ), ((( cJSON_GetObjectItem(json, "lat")->valuedouble - GD2GE_LATI_DIFF ) / 180) * PI ),ORIGIN_IN_HENGSHENG_ALTI);
       //set_leg_end_pos(&task_info, 2.098446255, 0.526453375, ORIGIN_IN_HENGSHENG_ALTI);
       // set_leg_end_pos(&task_info, 2.094280800, 0.528453784, ORIGIN_IN_HENGSHENG_ALTI);
       //set_leg_end_pos(&task_info, ORIGIN_IN_HENGSHENG_LONGTI, ORIGIN_IN_HENGSHENG_LATI, ORIGIN_IN_HENGSHENG_ALTI);
@@ -730,6 +759,8 @@ int temporary_init_deliver_route_list(void)
 		printf("Add Deliver Route Node ERROR.\n");
 		return -1;
 	}
+	else
+		return 0;
 	
 }
 
@@ -772,6 +803,7 @@ int temporary_init_goback_route_list(void)
 		printf("Add Goback Route Node ERROR.\n");
 		return -1;
 	}
+	return 0;
 }
 
 

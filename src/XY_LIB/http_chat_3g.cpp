@@ -25,6 +25,11 @@ sem_t report_drone_pos_sem;
 int post_req_flag = 0;
 
 struct post_info post_package = {0};
+static void *reported_data_thread_func(void * arg);
+static void *wait_order_thread_func(void * arg);
+
+//static void *keep_alive_thread_func(void * arg);
+static void *report_drone_pos_at_intervals_thread_func(void *arg);
 
 
 void XY_Update_Post_Flag(int _offset)
@@ -238,12 +243,12 @@ int find_available_post_msg(int need_len, int used_msg)
 	return -1;
 }
 
-int XY_Send_Http_Post_Request_Data(int seq, char *fmt, ...)
+int XY_Send_Http_Post_Request_Data(int seq, const char *fmt, ...)
 {
 	va_list args;
 	int r;
 
-	if( ((r = XY_Get_Post_Flag()) & (1<<seq)) != 0  || seq == NULL)
+	if( ((r = XY_Get_Post_Flag()) & (1<<seq)) != 0  || seq == 0)
 	{
 		seq = find_available_post_msg( strlen((const char *)fmt), r); 
 		if(seq < 0)
@@ -287,11 +292,13 @@ int XY_Send_Http_Post_Request_Data(int seq, char *fmt, ...)
 static void *reported_data_thread_func(void * arg)
 {
 	int _flag = 0;
-	int i = 0;
+	unsigned int i = 0;
 	int ret = 0;
 	int err_cnt[10] = {0};
 	int recv_bytes;
 	char recv_buf[512];
+
+	
 	struct timeval tv_recv_timeo;
 	
 	tv_recv_timeo.tv_sec = 1; 	// set recv timeout is 1s
@@ -399,8 +406,8 @@ static void *wait_order_thread_func(void * arg)
 	fd_set http_fds; 
 	struct timeval tv;
 	int ret, recv_cnt = 0;
-	struct timeval tpstart, tpend;
-	int timeuse, timesleep;
+	//struct timeval tpstart, tpend;
+	//int timeuse, timesleep;
 	int length = 0;
 	char json_buf[500] = {0};
 
@@ -622,7 +629,7 @@ void message_server_current_pos_of_drone(void)
 #endif
 }
 
-
+#if 0
 static void *keep_alive_thread_func(void * arg)
 {
 	while(1)
@@ -630,8 +637,9 @@ static void *keep_alive_thread_func(void * arg)
 		sleep(10);
 		message_server_keep_alive();
 	}
+	pthread_exit(NULL);
 }
-
+#endif
 
 void enable_report_drone_pos(void)
 {
@@ -650,6 +658,7 @@ static void *report_drone_pos_at_intervals_thread_func(void *arg)
 		sleep(1);
 		message_server_current_pos_of_drone();
 	}
+	pthread_exit(NULL);
 }
 
 

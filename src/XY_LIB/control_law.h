@@ -13,6 +13,13 @@
 #define DT 								(0.02)	//the period, for integration
 #define PI								(3.1415926)
 
+/*GPS mode*/
+#define VEL_CTRL_MODE                   1
+#define ALTI_CTRL_MODE                  2
+#define GPS_OK_FOR_USE					4		//if gps health from inner controller is bigger than this value, the gps vel can be use
+#define GPS_VERY_GOOD					5
+#define CTRL_MODE_CHANGE_GPS            10      //if higher than this, use vel ctrl
+
 /*move xy para*/
 #define HOVER_POINT_RANGE 				(0.1)	//FP use
 #define TRANS_TO_HOVER_DIS 				(13.0) 	// for P2P trans to FP, can del
@@ -30,6 +37,8 @@
 
 #define MAX_EACH_DIS_IMAGE_GET_CLOSE	(3.0)	//each time the image target dis limit
 #define MAX_CTRL_VEL_UPDOWN_WITH_IMAGE	(0.35)	//just for x,y control, change from 0.5 by zhanglei night 0114
+#define MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE	(10.0)	//just for x,y control, add by zhanglei 0310 night
+
 #define CAM_INSTALL_DELTA_X				(0.0)	//m,add to offset camera x, down to see drone, x is right 
 #define CAM_INSTALL_DELTA_Y				(0.218)	//m,add to offset camera y, down to see drone, y is down, the drone center is y+
 
@@ -37,8 +46,7 @@
 #define SEPT_TIMES_FOR_CAL_XY_VEL		3		//the times of period of image data between two data to cal the velocity
 
 #define MAX_CAM_DIFF_ADJUST				(1.0)	//use for offset_adjust cal
-#define GPS_OK_FOR_USE					4		//if gps health from inner controller is bigger than this value, the gps vel can be use
-#define GPS_VERY_GOOD					5	
+
 
 
 
