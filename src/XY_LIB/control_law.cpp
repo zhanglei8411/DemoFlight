@@ -813,7 +813,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         }
         else
         {
-            ctrl_mode_flag = ALTI_CTRL_MODE;
+            ctrl_mode_flag = ATTI_CTRL_MODE;
         }
         
         /*under 3.5m  launch the retrun timeout, enter once*/
@@ -1054,8 +1054,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			offset.y -= CAM_INSTALL_DELTA_Y;
 
 			//adjust the install angle of the camera, get camera actural angle
-			//roll_rard += (1.0)/180*PI;	//when the camera head rotation right, +, add the angle
-			//pitch_rard += (0.3)/180*PI; //when the camera head rotation up, +, add the angle
+            roll_rard += (CAM_INSTALL_DELTA_ROLL) / 180 * PI;
+            pitch_rard += (CAM_INSTALL_DELTA_PITCH) / 180 * PI;
 			
 			x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
 			y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
@@ -1137,7 +1137,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					
 					/***Init the integration para***
 					**1.count
-					**2.position,x,y
+					**2.position,x,y; i para set to 0
 					**3.vel,x,y
 					***************/
 					integration_count_xy = 0;
@@ -1151,12 +1151,16 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					integ_mem_vx = 0;
 					integ_mem_vy = 0;
 	
-					/*use the image velocity---- add by zhanglei 0226
-					**1. update, use image vel
-					**2. not update, use gps vel
-					**3. gps is good, use gps vel
+					/*use the image velocity----modi, 0312; add by zhanglei 0226
+					**1. set the gps vel
+					**2. if gps not ok, ultra is low, image update, use image vel
 					***/
-					if ( if_offset_x_y_ready == 1 && image_vel_update == 1 )
+                    
+                    cvel_no_gps.x = _cvel.x;
+                    cvel_no_gps.y = _cvel.y;
+                    
+                    
+					if ( GPS_OK_FOR_USE > _cpos.health_flag && 1 == ultra_height_use_flag && ( 1 == if_offset_x_y_ready && 1 == image_vel_update ))
 					{
 						if ( count_offset == 0 )
 						{
@@ -1172,13 +1176,13 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						{
 							vel_x_image = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL]));
 							vel_y_image = (offset_x[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL] - offset_x[count_offset_current]) /	(DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL]));
-							printf("count_offset_current=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL], _cvel.x, _cvel.y);
+							printf("[WARNING]IMAGE VEL USE-->count_offset_current=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL], _cvel.x, _cvel.y);
 						}
 						else
 						{
 							vel_x_image = (offset_y[count_offset_current] - offset_y[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL]) / (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL]));
 							vel_y_image = (offset_x[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL] - offset_x[count_offset_current]) /  (DT * (count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL]));
-							printf("count_offset_current<2=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL], _cvel.x, _cvel.y);
+							printf("[WARNING]IMAGE VEL USE-->count_offset_current<2=%d,vel_x_image=%f,vel_y_image=%f,count_xy=%d,gps_vx=%.4f,gps_vy=%.4f\n",count_offset_current,vel_x_image,vel_y_image,count_xy[count_offset_current]-count_xy[count_offset_current - SEPT_TIMES_FOR_CAL_XY_VEL + DEPTH_IMAGE_XY_CAL], _cvel.x, _cvel.y);
 						}
 	
 						//count_time_offset_flag = 0;
@@ -1191,25 +1195,11 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 						cvel_no_gps.y = vel_y_image;
 	
 					}
-					else if ( GPS_VERY_GOOD != _cpos.health_flag )
-					{
-						cvel_no_gps.x = _cvel.x;
-						cvel_no_gps.y = _cvel.y;
-						printf("USE GPS(%d) XY Velocity to Control! Height: %.4f \n", _cpos.health_flag, _cpos.height);
-					}
-					
-					if ( GPS_VERY_GOOD <= _cpos.health_flag)
-					{						
-						cvel_no_gps.x = _cvel.x;
-						cvel_no_gps.y = _cvel.y;
-						printf("USE GPS(%d) XY Velocity to Control! Height: %.4f \n", _cpos.health_flag, _cpos.height);
-					}
-					
 					
 				}
 				else
 				{
-					printf("GPS or IMAGE not ready for cal the xy vel--GPS: %d, IMAGE: R%d U%d\n", _cpos.health_flag, if_offset_x_y_ready, image_vel_update);
+					printf("[WARNING]GPS or IMAGE not ready for cal the xy vel--GPS: %d, IMAGE: R%d U%d\n", _cpos.health_flag, if_offset_x_y_ready, image_vel_update);
 				}
 	            
 			}
@@ -1281,37 +1271,68 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             cvel_no_gps.z = _cvel.z;
         }
         
-        /*******According to ctrl flag to use Altitude or Velocity ctrl mode****/
-        if ( ALTI_CTRL_MODE == ctrl_mode_flag )
+        /*******According to ctrl flag to use Attitude or Velocity ctrl mode****
+        **1. set the vel control para
+        **2. calcu the vel control, set mode
+        **3. check the ctrl flag, if atti mode, calcu the atti control, set mode
+        **/
+        
+        /*vel control para*/
+        kd_v = 0.05;
+        ki_v = 0;
+        kp_v = 0.1;
+        
+        /*calcu the vel control*/
+        user_ctrl_data.ctrl_flag = 0x40;
+        
+        /*Calcu the control value by integration position*/
+        integ_mem_px +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
+        limit_range(&integ_mem_px, 45);
+        
+        integ_mem_py +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
+        limit_range(&integ_mem_py, 45);
+        
+        x_n_vel = - kp_v * ( cxyz_no_gps.x - cur_target_xyz.x ) - ki_v * integ_mem_px - kd_v * (cvel_no_gps.x) ;//- k2p * (cxyz.x - exyz.x) - k2d * (_cvel.x)
+        y_e_vel = - kp_v * ( cxyz_no_gps.y - cur_target_xyz.y ) - ki_v * integ_mem_py - kd_v * (cvel_no_gps.y) ;// vel control
+        
+        /*Limit the x y control value*/
+        if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
         {
+            x_n_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+        }
+        else if(x_n_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+        {
+            x_n_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+        }
+        
+        if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+        {
+            y_e_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+        }
+        else if(y_e_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
+        {
+            y_e_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
+        }
+        
+        user_ctrl_data.roll_or_x = x_n_vel;
+        user_ctrl_data.pitch_or_y = y_e_vel;
+        
+        if ( ATTI_CTRL_MODE == ctrl_mode_flag )
+        {
+            
             user_ctrl_data.ctrl_flag = 0x00;
             
-            kd_v = 0.05;
-			ki_v = 0;
-            kp_v = 0.1;
-			
             kd_a = 0;
-			ki_a = 0.5;
+            ki_a = 0;//set from (0.5 to 0),0312 flight 3 time, once go far away not back
             kp_a = 20;
+            
             /*Add alti control law here*/
-
-			integ_mem_px +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
-			limit_range(&integ_mem_px, 45);
-			
-	 		integ_mem_py +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
-			limit_range(&integ_mem_py, 45);
-
-	 
 	        integ_mem_vx += (cvel_no_gps.x - x_n_vel) * DT;
 			limit_range(&integ_mem_vx, 2);
 			
 	 		integ_mem_vy += (cvel_no_gps.y - y_e_vel) * DT;//store history error
 	 		limit_range(&integ_mem_vy, 2);
-			
-
-	 		x_n_vel = kp_v * (cur_target_xyz.x - cxyz_no_gps.x) - ki_v * integ_mem_px - kd_v * (cvel_no_gps.x) ;//- k2p * (cxyz.x - exyz.x) - k2d * (_cvel.x)
-			y_e_vel = kp_v * (cur_target_xyz.y - cxyz_no_gps.y) - ki_v * integ_mem_py - kd_v * (cvel_no_gps.y) ;// vel control
-			  
+		  
 			pitch_or_y =  kp_a * (x_n_vel - cvel_no_gps.x) - ki_a * integ_mem_vx - kd_a * (-1.0 * cw.w.y);
 			roll_or_x =  kp_a * (y_e_vel - cvel_no_gps.y) - ki_a * integ_mem_vy - kd_a * (cw.w.x) ;// acc control
             /*
@@ -1323,72 +1344,36 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 			*/
             
             /*Limit the x y control value*/
-            if(pitch_or_y > MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE)
+            if(pitch_or_y > MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE)
             {
-                pitch_or_y = MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE;
+                pitch_or_y = MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE;
             }
-            else if(pitch_or_y < (-1.0) * MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE)
+            else if(pitch_or_y < (-1.0) * MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE)
             {
-                pitch_or_y = (-1.0) * MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE;
+                pitch_or_y = (-1.0) * MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE;
             }
             
-            if(roll_or_x > MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE)
+            if(roll_or_x > MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE)
             {
-                roll_or_x = MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE;
+                roll_or_x = MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE;
             }
-            else if(roll_or_x < (-1.0) * MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE)
+            else if(roll_or_x < (-1.0) * MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE)
             {
-                roll_or_x = (-1.0) * MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE;
+                roll_or_x = (-1.0) * MAX_CTRL_ATTI_UPDOWN_WITH_IMAGE;
             }
             
             user_ctrl_data.roll_or_x = roll_or_x;
             user_ctrl_data.pitch_or_y = (-1.0) * pitch_or_y;
             
-        }
-        else if ( VEL_CTRL_MODE == ctrl_mode_flag )
-        {
-            user_ctrl_data.ctrl_flag = 0x40;
-        
-            kd_v = 0.05;
-            kp_v = 0.1;
+            printf("[WARNGING] ATTI CTRL MODE! flag=%d\n", ctrl_mode_flag );
             
-            /*Calcu the control value by integration position*/
-            x_n_vel = - kp_v * (cxyz_no_gps.x - cur_target_xyz.x) - kd_v * (cvel_no_gps.x);
-            y_e_vel = - kp_v * (cxyz_no_gps.y - cur_target_xyz.y) - kd_v * (cvel_no_gps.y);
-            
-            /*Limit the x y control value*/
-            if(x_n_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
-            {
-                x_n_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-            }
-            else if(x_n_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
-            {
-                x_n_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-            }
-            
-            if(y_e_vel > MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
-            {
-                y_e_vel = MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-            }
-            else if(y_e_vel < (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE)
-            {
-                y_e_vel = (-1.0) * MAX_CTRL_VEL_UPDOWN_WITH_IMAGE;
-            }
-            
-            user_ctrl_data.roll_or_x = x_n_vel;
-            user_ctrl_data.pitch_or_y = y_e_vel;
-            
-        }
-        else
-        {
-            printf("[WARNGING] NO CTRL MODE! flag=%d\n", ctrl_mode_flag );
         }
 
 		printf("[%d][%d]Roll_Y_E=%.4f, Pitch_X_N=%.4f, dx=%.4f,vx=%.4f,dy=%.4f,vy=%.4f\n",ctrl_mode_flag, _cpos.health_flag, user_ctrl_data.roll_or_x, user_ctrl_data.pitch_or_y, cxyz_no_gps.x - cur_target_xyz.x, cvel_no_gps.x, cxyz_no_gps.y - cur_target_xyz.y, cvel_no_gps.y );
 
         last_dis_to_mark = sqrt(pow((cxyz_no_gps.x - cur_target_xyz.x), 2) + pow((cxyz_no_gps.y - cur_target_xyz.y), 2));		
         
-        if (last_dis_to_mark < (target_dist * 0.75) )
+        if (last_dis_to_mark < ( target_dist * 0.75 ) )
         {
             printf("last_dis_to_mark is %f\n", last_dis_to_mark);
             if ( integration_count_xy < 100 )
@@ -1984,8 +1969,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
             offset.y -= CAM_INSTALL_DELTA_Y;
 
 			//adjust the install angle of the camera, get camera actural angle
-			roll_rard += (3.0)/180*PI;	//when the camera head rotation right, +, add the angle
-			pitch_rard += (1.8)/180*PI; //when the camera head rotation up, +, add the angle
+			roll_rard += (CAM_INSTALL_DELTA_ROLL) / 180 * PI;
+			pitch_rard += (CAM_INSTALL_DELTA_PITCH) / 180 * PI;
 
             x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);       // modified to use the Height not use offset.z by zl, 0113
             y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);     // modified to use the Height not use offset.z by zl, 0113
