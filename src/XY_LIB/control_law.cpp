@@ -10,6 +10,23 @@ extern pthread_cond_t debug_cond;
 extern int drone_goback;
 extern Leg_Node *cur_legn;
 
+static void limit_range(double *src_data,double range)
+{
+	if( *src_data > 0 )
+	{
+		if( *src_data > range )
+		{
+			*src_data = range;
+		}
+	}
+	else
+	{
+		if( *src_data < (0 - range) )
+		{
+			*src_data = 0 - range;
+		}
+	}		
+}
 
 void init_g_origin_pos(api_pos_data_t *_g_origin_pos)
 {
@@ -724,7 +741,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
     api_vel_data_t cvel_no_gps;
     int integration_count_xy, integration_count_z;
     double y_e_vel, x_n_vel;
-    float kd_v, kp_v, kd_a, kp_a;
+    float kd_v, kp_v,ki_v, kd_a, kp_a,ki_a;
     float target_dist;
     int arrive_flag = 1;
     int ultra_height_use_flag = 0;
@@ -756,6 +773,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 	unsigned char ctrl_mode_flag = 0;
 	sdk_std_msg_t cw;
 	float pitch_or_y = 0, roll_or_x = 0;
+	double integ_mem_vx = 0,integ_mem_vy = 0, integ_mem_px = 0,integ_mem_py = 0;
 	
     DJI_Pro_Get_Pos(&_focus_point);
     DJI_Pro_Get_GroundVo(&_cvel);
@@ -1126,6 +1144,12 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 					
 					cxyz_no_gps.x = 0;
 					cxyz_no_gps.y = 0;
+
+					integ_mem_px = 0;
+					integ_mem_py = 0;
+
+					integ_mem_vx = 0;
+					integ_mem_vy = 0;
 	
 					/*use the image velocity---- add by zhanglei 0226
 					**1. update, use image vel
@@ -1225,6 +1249,12 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             
             cxyz_no_gps.x = 0;
             cxyz_no_gps.y = 0;
+
+			integ_mem_px = 0;
+			integ_mem_py = 0;
+
+			integ_mem_vx = 0;
+			integ_mem_vy = 0;
             
             cur_target_xyz.x = 0;
             cur_target_xyz.y = 0;
@@ -1257,16 +1287,40 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             user_ctrl_data.ctrl_flag = 0x00;
             
             kd_v = 0.05;
-            kp_v = 0.3;
+			ki_v = 0;
+            kp_v = 0.1;
+			
             kd_a = 0;
+			ki_a = 0.5;
             kp_a = 20;
             /*Add alti control law here*/
-            
+
+			integ_mem_px +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
+			limit_range(&integ_mem_px, 45);
+			
+	 		integ_mem_py +=(cxyz_no_gps.x - cur_target_xyz.x) * DT;
+			limit_range(&integ_mem_py, 45);
+
+	 
+	        integ_mem_vx += (cvel_no_gps.x - x_n_vel) * DT;
+			limit_range(&integ_mem_vx, 2);
+			
+	 		integ_mem_vy += (cvel_no_gps.y - y_e_vel) * DT;//store history error
+	 		limit_range(&integ_mem_vy, 2);
+			
+
+	 		x_n_vel = kp_v * (cur_target_xyz.x - cxyz_no_gps.x) - ki_v * integ_mem_px - kd_v * (cvel_no_gps.x) ;//- k2p * (cxyz.x - exyz.x) - k2d * (_cvel.x)
+			y_e_vel = kp_v * (cur_target_xyz.y - cxyz_no_gps.y) - ki_v * integ_mem_py - kd_v * (cvel_no_gps.y) ;// vel control
+			  
+			pitch_or_y =  kp_a * (x_n_vel - cvel_no_gps.x) - ki_a * integ_mem_vx - kd_a * (-1.0 * cw.w.y);
+			roll_or_x =  kp_a * (y_e_vel - cvel_no_gps.y) - ki_a * integ_mem_vy - kd_a * (cw.w.x) ;// acc control
+            /*
 			x_n_vel = kp_v * (cur_target_xyz.x - cxyz_no_gps.x) - kd_v * (cvel_no_gps.x) ;//- k2p * (cxyz.x - exyz.x) - k2d * (_cvel.x)
 			y_e_vel = kp_v * (cur_target_xyz.y - cxyz_no_gps.y) - kd_v * (cvel_no_gps.y) ;// vel control
 			  
 			pitch_or_y =  kp_a * (x_n_vel - cvel_no_gps.x) - kd_a * (-1.0 * cw.w.y);
 			roll_or_x =  kp_a * (y_e_vel - cvel_no_gps.y) - kd_a * (cw.w.x) ;// acc control
+			*/
             
             /*Limit the x y control value*/
             if(pitch_or_y > MAX_CTRL_ALTI_UPDOWN_WITH_IMAGE)
@@ -1930,8 +1984,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
             offset.y -= CAM_INSTALL_DELTA_Y;
 
 			//adjust the install angle of the camera, get camera actural angle
-			roll_rard += (2.0)/180*PI;	//when the camera head rotation right, +, add the angle
-			pitch_rard += (0.8)/180*PI; //when the camera head rotation up, +, add the angle
+			roll_rard += (3.0)/180*PI;	//when the camera head rotation right, +, add the angle
+			pitch_rard += (1.8)/180*PI; //when the camera head rotation up, +, add the angle
 
             x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);       // modified to use the Height not use offset.z by zl, 0113
             y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard);     // modified to use the Height not use offset.z by zl, 0113
