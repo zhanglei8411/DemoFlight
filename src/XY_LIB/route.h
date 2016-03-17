@@ -18,6 +18,18 @@
 #include "common/common.h"
 #include "control_steer.h"
 
+
+/*-----yaw for up down------*/
+#define DELIVER_YAW_OF_UPH3									(0.0)
+#define DELIVER_THRESHOLD_OF_YAW_OF_UPH3					(3.0)
+
+#define DELIVER_YAW_OF_DOWNH1								(0.0)
+#define DELIVER_THRESHOLD_OF_YAW_OF_DOWNH1				(3.0)
+
+
+#define GOBACK_YAW_OF_DOWNH1								(0.0)
+#define GOBACK_THRESHOLD_OF_YAW_OF_DOWNH1					(3.0)
+
 /*-----velocity for up down------*/
 /*deliver up*/
 #define DELIVER_MAX_VEL_UP_TO_H2								(1.25)	
@@ -27,7 +39,7 @@
 #define DELIVER_MIN_VEL_UP_TO_H3								(0.5)	//0220 (1.0 to 0.5)
 
 /*deliver down*/
-#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.75)
+#define DELIVER_MAX_VEL_DOWN_TO_H1								(1.0)	//from (1.75 to 1.0) 0315
 #define DELIVER_MIN_VEL_DOWN_TO_H1								(0.2)	//0220 (0.4 to 0.2); ready to hover find image
 
 /*down and drop*/
@@ -47,7 +59,7 @@
 
 
 /*go back down */
-#define GOBACK_MAX_VEL_DOWN_TO_H1								(1.75)
+#define GOBACK_MAX_VEL_DOWN_TO_H1								(1.0)	//from (1.75 to 1.0) 0315
 #define GOBACK_MIN_VEL_DOWN_TO_H1								(0.2)	//0220 (0.5 to 0.2); ready to hover find image
 
 #define GOBACK_MAX_VEL_DOWN_TO_H2								(0.5)	//0220 set o.5

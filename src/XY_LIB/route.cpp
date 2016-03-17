@@ -256,16 +256,18 @@ int drone_deliver_up_to_h2(void)
 
 int drone_deliver_up_to_h3(void)
 {
-	float max_vel, min_vel, t_height, threshold, kp_z;
+	float max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold,  kp_z;
 	
 	/* code just run one time */
 	max_vel 	= DELIVER_MAX_VEL_UP_TO_H3;					//m/s
 	min_vel		= DELIVER_MIN_VEL_UP_TO_H3;			
 	t_height 	= DELIVER_HEIGHT_OF_UPH3;					//m
 	threshold 	= DELIVER_THRESHOLD_OF_UP_TO_H3_OUT;		//m
+	t_yaw = DELIVER_YAW_OF_UPH3;
+	yaw_threshold = DELIVER_THRESHOLD_OF_YAW_OF_UPH3;
 	kp_z		= DELIVER_UP_TO_H3_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z) == 1)
 		return 1;
 	else 
 		return -1;
@@ -338,16 +340,18 @@ static void *drone_deliver_p2p_thread_func(void * arg)
 /* ============================================================================ */
 int drone_deliver_down_to_h1(void)
 {
-	float max_vel, min_vel, t_height, threshold, kp_z;
+	float max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z;
 	
 	/* code just run one time */
 	max_vel 	= DELIVER_MAX_VEL_DOWN_TO_H1;				//m/s
 	min_vel		= DELIVER_MIN_VEL_DOWN_TO_H1;
 	t_height	= DELIVER_HEIGHT_OF_DOWNH1;					//m
 	threshold	= DELIVER_THRESHOLD_OF_DOWN_TO_H1_OUT;		//m
+	t_yaw = DELIVER_YAW_OF_DOWNH1;
+	yaw_threshold = DELIVER_THRESHOLD_OF_YAW_OF_DOWNH1;
 	kp_z		= DELIVER_DOWN_TO_H1_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z) == 1)
 		return 1;
 	else 
 		return -1;
@@ -378,6 +382,7 @@ int drone_deliver_down_to_h2(void)
 		return -1;
 }
 
+/*not used*/
 int drone_deliver_down_to_h3(void)
 {
 	float max_vel, min_vel, t_height, threshold, kp_z;
@@ -565,16 +570,18 @@ static void *drone_goback_p2p_thread_func(void * arg)
 /* ============================================================================ */
 int drone_goback_down_to_h1(void)
 {
-	float max_vel, min_vel, t_height, threshold, kp_z;
+	float max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z;
 	
 	/* code just run one time */
 	max_vel 	= GOBACK_MAX_VEL_DOWN_TO_H1;				//m/s
 	min_vel		= GOBACK_MIN_VEL_DOWN_TO_H1;
 	t_height	= GOBACK_HEIGHT_OF_DOWNH1;					//m
 	threshold	= GOBACK_THRESHOLD_OF_DOWN_TO_H1_OUT;		//m
+	t_yaw = GOBACK_YAW_OF_DOWNH1;
+	yaw_threshold = GOBACK_THRESHOLD_OF_YAW_OF_DOWNH1;
 	kp_z		= GOBACK_DOWN_TO_H1_KPZ;
 	
-	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
+	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z) == 1)
 		return 1;
 	else 
 		return -1;
@@ -605,9 +612,10 @@ int drone_goback_down_to_h2(void)
 		return -1;
 }
 
+/*not used*/
 int drone_goback_down_to_h3(void)
 {
-	float max_vel, min_vel, t_height, threshold, kp_z;
+	float max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z;
 	
 	/* code just run one time */
 	max_vel 	= GOBACK_MAX_VEL_DOWN_TO_H3;					//m/s
