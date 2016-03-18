@@ -2285,19 +2285,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
                     y_camera_diff_with_pitch = 0 - MAX_CAM_DIFF_ADJUST;
             }
             
-            /*0317 add，big target no need to care the UAV attitude*/
-            if( 1 == ultra_height_is_low)
-            {
-                offset_adjust.x = offset.x;
-                offset_adjust.y = offset.y;
-            
-            }
-            else
-            {
-                offset_adjust.x = offset.x - x_camera_diff_with_roll;
-                offset_adjust.y = offset.y - y_camera_diff_with_pitch;
-            }
-
+            offset_adjust.x = offset.x - x_camera_diff_with_roll;
+            offset_adjust.y = offset.y - y_camera_diff_with_pitch;
             
             //save the offset_ad to sd card
             set_log_offset_adjust(offset_adjust);
