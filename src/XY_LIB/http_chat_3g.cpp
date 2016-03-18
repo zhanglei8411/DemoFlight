@@ -9,7 +9,7 @@
 #include "wireless_debug.h"
 
 
-#define HTTP_DEBUG_PRINT	1
+#define HTTP_DEBUG_PRINT	0
 #define HTTP_FUNC_ON		1
 
 int sock_fd = -1;

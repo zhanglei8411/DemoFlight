@@ -43,5 +43,9 @@ int XY_Start_Capture(void);
 int XY_Stop_Capture(void);
 int XY_Capture_Setup(void);
 void clear_sample_states(void);
+int XY_close_Capture(void);
+void change_image_version(const char* version);
+
+
 
 #endif

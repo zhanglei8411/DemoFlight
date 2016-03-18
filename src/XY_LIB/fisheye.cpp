@@ -42,8 +42,9 @@
 
 #include "precomp.hpp"
 #include "fisheye.hpp"
-
-namespace cv { namespace
+using namespace cv;
+using namespace xyVision;
+namespace xyVision { namespace
 {
     struct JacobianRow
     {
@@ -65,7 +66,7 @@ namespace cv { namespace
 //    projectPoints(objectPoints, imagePoints, affine.rvec(), affine.translation(), K, D, alpha, jacobian);
 //}
 
-void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray _rvec,
+void xyVision::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray _rvec,
         InputArray _tvec, InputArray _K, InputArray _D, double alpha, OutputArray jacobian)
 {
     // will support only 3-channel data now for points
@@ -248,7 +249,7 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::distortPoints
 
-void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha)
+void xyVision::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha)
 {
     // will support only 2-channel data now for points
     CV_Assert(undistorted.type() == CV_32FC2 || undistorted.type() == CV_64FC2);
@@ -310,7 +311,7 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
+void xyVision::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
 {
     // will support only 2-channel data now for points
     CV_Assert(distorted.type() == CV_32FC2 || distorted.type() == CV_64FC2);
@@ -400,7 +401,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArray P,
+void xyVision::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArray P,
     const cv::Size& size, int m1type, OutputArray map1, OutputArray map2 )
 {
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32F || m1type <=0 );
@@ -497,7 +498,7 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortImage
 
-void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
+void xyVision::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew, const Size& new_size)
 {
     Size size = new_size.area() != 0 ? new_size : distorted.size();
@@ -511,7 +512,7 @@ void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::estimateNewCameraMatrixForUndistortRectify
 
-void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+void xyVision::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
     OutputArray P, double balance, const Size& new_size, double fov_scale)
 {
     CV_Assert( K.size() == Size(3, 3)       && (K.depth() == CV_32F || K.depth() == CV_64F));
@@ -608,7 +609,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::stereoRectify
 
-void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
+void xyVision::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
         InputArray _R, InputArray _tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2,
         OutputArray Q, int flags, const Size& newImageSize, double balance, double fov_scale)
 {
@@ -691,7 +692,7 @@ void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::calibrate
 
-double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
+double xyVision::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
                                     InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                     int flags , cv::TermCriteria criteria)
 {
@@ -705,7 +706,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     CV_Assert(((flags & CALIB_USE_INTRINSIC_GUESS) && !K.empty() && !D.empty()) || !(flags & CALIB_USE_INTRINSIC_GUESS));
 
-    using namespace cv::internal;
+    using namespace xyVision::internal;
     //-------------------------------Initialization
     IntrinsicParams finalParam;
     IntrinsicParams currentParam;
@@ -807,7 +808,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::stereoCalibrate
 
-double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+double xyVision::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                     OutputArray R, OutputArray T, int flags, TermCriteria criteria)
 {
@@ -835,11 +836,11 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
     double change = 1;
 
-    cv::internal::IntrinsicParams intrinsicLeft;
-    cv::internal::IntrinsicParams intrinsicRight;
+    xyVision::internal::IntrinsicParams intrinsicLeft;
+    xyVision::internal::IntrinsicParams intrinsicRight;
 
-    cv::internal::IntrinsicParams intrinsicLeft_errors;
-    cv::internal::IntrinsicParams intrinsicRight_errors;
+    xyVision::internal::IntrinsicParams intrinsicLeft_errors;
+    xyVision::internal::IntrinsicParams intrinsicRight_errors;
 
     Matx33d _K1, _K2;
     Vec4d _D1, _D2;
@@ -943,7 +944,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             //left camera jacobian
             cv::Mat rvec = cv::Mat(rvecs1[image_idx]);
             cv::Mat tvec  = cv::Mat(tvecs1[image_idx]);
-            cv::internal::projectPoints(object, projected, rvec, tvec, intrinsicLeft, jacobians);
+            xyVision::internal::projectPoints(object, projected, rvec, tvec, intrinsicLeft, jacobians);
             cv::Mat(cv::Mat((imageLeft - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(0, 2 * n_points));
             jacobians.colRange(8, 11).copyTo(Jkk.colRange(24 + image_idx * 6, 27 + image_idx * 6).rowRange(0, 2 * n_points));
             jacobians.colRange(11, 14).copyTo(Jkk.colRange(27 + image_idx * 6, 30 + image_idx * 6).rowRange(0, 2 * n_points));
@@ -957,7 +958,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             rvec = cv::Mat(rvecs2[image_idx]);
             tvec  = cv::Mat(tvecs2[image_idx]);
 
-            cv::internal::projectPoints(object, projected, omr, Tr, intrinsicRight, jacobians);
+            xyVision::internal::projectPoints(object, projected, omr, Tr, intrinsicRight, jacobians);
             cv::Mat(cv::Mat((imageRight - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(2 * n_points, 4 * n_points));
             cv::Mat dxrdom = jacobians.colRange(8, 11) * domrdom + jacobians.colRange(11, 14) * dTrdom;
             cv::Mat dxrdT = jacobians.colRange(8, 11) * domrdT + jacobians.colRange(11, 14)* dTrdT;
@@ -992,7 +993,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         cv::Vec6d oldTom(Tcur[0], Tcur[1], Tcur[2], omcur[0], omcur[1], omcur[2]);
 
         //update all parameters
-        cv::subMatrix(J, J, selectedParams, std::vector<int>(J.rows, 1));
+        xyVision::subMatrix(J, J, selectedParams, std::vector<int>(J.rows, 1));
         cv::Mat J2 = J.t() * J;
         J2_inv = J2.inv();
         int a = cv::countNonZero(intrinsicLeft.isEstimate);
@@ -1043,7 +1044,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     return rms;
 }
 
-namespace cv{ namespace {
+namespace xyVision{ namespace {
 void subMatrix(const Mat& src, Mat& dst, const std::vector<int>& cols, const std::vector<int>& rows)
 {
     CV_Assert(src.type() == CV_64FC1);
@@ -1074,17 +1075,17 @@ void subMatrix(const Mat& src, Mat& dst, const std::vector<int>& cols, const std
 
 }}
 
-cv::internal::IntrinsicParams::IntrinsicParams():
+xyVision::internal::IntrinsicParams::IntrinsicParams():
     f(Vec2d::all(0)), c(Vec2d::all(0)), k(Vec4d::all(0)), alpha(0), isEstimate(9,0)
 {
 }
 
-cv::internal::IntrinsicParams::IntrinsicParams(Vec2d _f, Vec2d _c, Vec4d _k, double _alpha):
+xyVision::internal::IntrinsicParams::IntrinsicParams(Vec2d _f, Vec2d _c, Vec4d _k, double _alpha):
     f(_f), c(_c), k(_k), alpha(_alpha), isEstimate(9,0)
 {
 }
 
-cv::internal::IntrinsicParams cv::internal::IntrinsicParams::operator+(const Mat& a)
+xyVision::internal::IntrinsicParams xyVision::internal::IntrinsicParams::operator+(const Mat& a)
 {
     CV_Assert(a.type() == CV_64FC1);
     IntrinsicParams tmp;
@@ -1105,7 +1106,7 @@ cv::internal::IntrinsicParams cv::internal::IntrinsicParams::operator+(const Mat
     return tmp;
 }
 
-cv::internal::IntrinsicParams& cv::internal::IntrinsicParams::operator =(const Mat& a)
+xyVision::internal::IntrinsicParams& xyVision::internal::IntrinsicParams::operator =(const Mat& a)
 {
     CV_Assert(a.type() == CV_64FC1);
     const double* ptr = a.ptr<double>();
@@ -1125,7 +1126,7 @@ cv::internal::IntrinsicParams& cv::internal::IntrinsicParams::operator =(const M
     return *this;
 }
 
-void cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec4d& _k, const double& _alpha)
+void xyVision::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec4d& _k, const double& _alpha)
 {
     this->c = _c;
     this->f = _f;
@@ -1133,7 +1134,7 @@ void cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _
     this->alpha = _alpha;
 }
 
-void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+void xyVision::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
                    cv::InputArray _rvec,cv::InputArray _tvec,
                    const IntrinsicParams& param, cv::OutputArray jacobian)
 {
@@ -1144,7 +1145,7 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
     fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);
 }
 
-void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
+void xyVision::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
                             Mat&  tvec, Mat& J, const int MaxIter,
                             const IntrinsicParams& param, const double thresh_cond)
 {
@@ -1187,7 +1188,7 @@ void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& obj
     }
 }
 
-cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
+cv::Mat xyVision::internal::ComputeHomography(Mat m, Mat M)
 {
     int Np = m.cols;
 
@@ -1286,7 +1287,7 @@ cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
     return H;
 }
 
-cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param)
+cv::Mat xyVision::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param)
 {
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
 
@@ -1298,11 +1299,11 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
         ptr_d[i] = (ptr[i] - param.c).mul(Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
         ptr_d[i][0] = ptr_d[i][0] - param.alpha * ptr_d[i][1];
     }
-    cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
+    xyVision::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
     return undistorted;
 }
 
-void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
+void xyVision::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
 
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
@@ -1341,7 +1342,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Rodrigues(Rckk, omckk);
 }
 
-void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+void xyVision::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                          const IntrinsicParams& param, const int check_cond,
                          const double thresh_cond, InputOutputArray omc, InputOutputArray Tc)
 {
@@ -1376,7 +1377,7 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
 }
 
 
-void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+void xyVision::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                       const IntrinsicParams& param,  InputArray omc, InputArray Tc,
                       const int& check_cond, const double& thresh_cond, Mat& JJ2_inv, Mat& ex3)
 {
@@ -1441,7 +1442,7 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
     JJ2_inv = (JJ3).inv();
 }
 
-void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
+void xyVision::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                            const IntrinsicParams& params, InputArray omc, InputArray Tc,
                            IntrinsicParams& errors, Vec2d& std_err, double thresh_cond, int check_cond, double& rms)
 {
@@ -1496,7 +1497,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     rms = sqrt(rms);
 }
 
-void cv::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB)
+void xyVision::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB)
 {
     CV_Assert(A.getMat().cols == B.getMat().rows);
     CV_Assert(A.type() == CV_64FC1 && B.type() == CV_64FC1);
@@ -1530,7 +1531,7 @@ void cv::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArra
     }
 }
 
-void cv::internal::JRodriguesMatlab(const Mat& src, Mat& dst)
+void xyVision::internal::JRodriguesMatlab(const Mat& src, Mat& dst)
 {
     Mat tmp(src.cols, src.rows, src.type());
     if (src.rows == 9)
@@ -1560,7 +1561,7 @@ void cv::internal::JRodriguesMatlab(const Mat& src, Mat& dst)
     dst = tmp.clone();
 }
 
-void cv::internal::compose_motion(InputArray _om1, InputArray _T1, InputArray _om2, InputArray _T2,
+void xyVision::internal::compose_motion(InputArray _om1, InputArray _T1, InputArray _om2, InputArray _T2,
                     Mat& om3, Mat& T3, Mat& dom3dom1, Mat& dom3dT1, Mat& dom3dom2,
                     Mat& dom3dT2, Mat& dT3dom1, Mat& dT3dT1, Mat& dT3dom2, Mat& dT3dT2)
 {
@@ -1598,7 +1599,7 @@ void cv::internal::compose_motion(InputArray _om1, InputArray _T1, InputArray _o
     dT3dom1 = Mat::zeros(3, 3, CV_64FC1);
 }
 
-double cv::internal::median(const Mat& row)
+double xyVision::internal::median(const Mat& row)
 {
     CV_Assert(row.type() == CV_64FC1);
     CV_Assert(!row.empty() && row.rows == 1);
@@ -1608,7 +1609,7 @@ double cv::internal::median(const Mat& row)
     else return 0.5 *(tmp.at<double>((int)tmp.total() / 2) + tmp.at<double>((int)tmp.total() / 2 - 1));
 }
 
-cv::Vec3d cv::internal::median3d(InputArray m)
+cv::Vec3d xyVision::internal::median3d(InputArray m)
 {
     CV_Assert(m.depth() == CV_64F && m.getMat().rows == 1);
     Mat M = Mat(m.getMat().t()).reshape(1).t();

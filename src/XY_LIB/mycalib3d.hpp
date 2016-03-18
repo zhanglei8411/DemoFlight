@@ -1,8 +1,9 @@
 #ifndef MYCALIB3D_HPP
 #define MYCALIB3D_HPP
-namespace cv {
+namespace xyVision {
 namespace fisheye
 {
+using namespace cv;
     enum{
         CALIB_USE_INTRINSIC_GUESS   = 1,
         CALIB_RECOMPUTE_EXTRINSIC   = 2,

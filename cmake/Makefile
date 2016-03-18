@@ -1,11 +1,11 @@
 TARGET = ../output/xunyi-controlled-exe
 
 
-OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o fisheye.o getTargetLoc.o inifile.o image_identify.o thread_common_op.o status_led.o sd_store_log.o http_chat_3g.o cJSON.o ultra_filter.o
+OBJECTS = main.o DJI_Pro_App.o DJI_Pro_Hw.o DJI_Pro_Link.o DJI_Pro_Sample.o DJI_Pro_Codec.o DJI_Pro_Rmu.o tinyxml2.o uart_common.o wireless_debug.o route.o control_law.o control_steer.o range.o aruco.o charuco.o  dictionary.o fisheye.o getTargetLoc.o inifile.o predefined_dictionaries.o image_identify.o thread_common_op.o status_led.o sd_store_log.o http_chat_3g.o cJSON.o ultra_filter.o
 
 CFLAGS = -Wall -O3 -DPLATFORM_LINUX -DTINYXML_CFG -Isrc/ -I/src/DJI_LIB -I/src/XY_LIB -I/src/XY_LIB/common -I/usr/local/include/opencv -I/usr/local/include
 
-LDFLAGS = -lpthread -lm /usr/local/lib/libopencv_calib3d.so /usr/local/lib/libopencv_contrib.so /usr/local/lib/libopencv_core.so /usr/local/lib/libopencv_features2d.so /usr/local/lib/libopencv_flann.so /usr/local/lib/libopencv_gpu.so /usr/local/lib/libopencv_highgui.so /usr/local/lib/libopencv_imgproc.so /usr/local/lib/libopencv_legacy.so /usr/local/lib/libopencv_ml.so /usr/local/lib/libopencv_nonfree.so /usr/local/lib/libopencv_objdetect.so /usr/local/lib/libopencv_ocl.so /usr/local/lib/libopencv_photo.so /usr/local/lib/libopencv_stitching.so /usr/local/lib/libopencv_superres.so /usr/local/lib/libopencv_ts.a /usr/local/lib/libopencv_video.so /usr/local/lib/libopencv_videostab.so -lrt -ldl 
+LDFLAGS = -lcurl -lpthread -lm /usr/local/lib/libopencv_calib3d.so /usr/local/lib/libopencv_contrib.so /usr/local/lib/libopencv_core.so /usr/local/lib/libopencv_features2d.so /usr/local/lib/libopencv_flann.so /usr/local/lib/libopencv_gpu.so /usr/local/lib/libopencv_highgui.so /usr/local/lib/libopencv_imgproc.so /usr/local/lib/libopencv_legacy.so /usr/local/lib/libopencv_ml.so /usr/local/lib/libopencv_nonfree.so /usr/local/lib/libopencv_objdetect.so /usr/local/lib/libopencv_ocl.so /usr/local/lib/libopencv_photo.so /usr/local/lib/libopencv_stitching.so /usr/local/lib/libopencv_superres.so /usr/local/lib/libopencv_ts.a /usr/local/lib/libopencv_video.so /usr/local/lib/libopencv_videostab.so -lrt -ldl 
 
 
 CXX = g++ -pg -g -rdynamic
@@ -54,7 +54,16 @@ control_steer.o : ../src/XY_LIB/control_steer.cpp
 	
 range.o : ../src/XY_LIB/range.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/range.cpp
+
+aruco.o : ../src/XY_LIB/aruco.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/aruco.cpp
 	
+charuco.o : ../src/XY_LIB/charuco.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/charuco.cpp
+	
+dictionary.o : ../src/XY_LIB/dictionary.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/dictionary.cpp
+		
 fisheye.o : ../src/XY_LIB/fisheye.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/fisheye.cpp
 	
@@ -63,6 +72,9 @@ getTargetLoc.o : ../src/XY_LIB/getTargetLoc.cpp
 	
 inifile.o : ../src/XY_LIB/inifile.c
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/inifile.c
+
+predefined_dictionaries.o : ../src/XY_LIB/predefined_dictionaries.cpp
+	$(CXX) $(CFLAGS) -c ../src/XY_LIB/predefined_dictionaries.cpp
 	
 image_identify.o : ../src/XY_LIB/image_identify.cpp
 	$(CXX) $(CFLAGS) -c ../src/XY_LIB/image_identify.cpp

@@ -12,8 +12,11 @@ xyVision::GetTarget sample("config.ini");
 Offset_Data offset_data;
 
 pthread_mutex_t capture_on_off_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t capture_close_lock = PTHREAD_MUTEX_INITIALIZER;
+
 pthread_mutex_t offset_msg_lock = PTHREAD_MUTEX_INITIALIZER;
 int capture_on_flag = 0;
+int capture_off_flag = 0;      //add 0316 ,test close capture dev
 sem_t capture_start_sem;
 
 sem_t image_get_sem;
@@ -105,6 +108,27 @@ void clear_capture_on_flag(void)
 {
 	set_capture_on_flag(0);
 }
+//add 0316 ,test close capture dev
+void set_capture_close_flag(int _val)
+{
+	_val = _val > 1 ? 1 : _val;
+	pthread_mutex_lock(&capture_close_lock);
+	capture_off_flag = _val;
+	printf("capture_off_flag is %d\n",capture_off_flag);
+	pthread_mutex_unlock(&capture_close_lock);
+}
+//add 0316 ,test close capture dev
+int get_capture_close_flag(void)
+{
+	int ret;
+	pthread_mutex_lock(&capture_close_lock);
+	ret = capture_off_flag;
+	//printf("ret %d\n",ret);
+	pthread_mutex_unlock(&capture_close_lock);
+
+	return ret;
+}
+
 
 int get_capture_on_flag(void)
 {
@@ -114,6 +138,13 @@ int get_capture_on_flag(void)
 	pthread_mutex_unlock(&capture_on_off_lock);
 
 	return ret;
+}
+
+int if_capture_off(void)
+{
+	//printf(" if_capture_off\n");
+
+	return get_capture_close_flag();
 }
 
 int if_capture_on(void)
@@ -142,6 +173,15 @@ int XY_Stop_Capture(void)
 	set_capture_on_flag(0);
 	//clear_sample_states();
 	XY_Get_Offset_Data(&_offset, OFFSET_GET_ID_A);
+	return 0;
+}
+
+//add 0316 ,test close capture dev
+int XY_close_Capture(void)
+{
+	set_capture_close_flag(1);
+	sem_post(&capture_start_sem);
+	printf("capture will be close.\n");
 	return 0;
 }
 
@@ -195,7 +235,7 @@ int mk_image_store_dir(void)
 }
 #endif
 
-int save_image_into_sdcard(Mat _image)
+int save_image_into_sdcard(Mat _image, int* image_cnt)
 {
 	struct timeval	  tv;  
 	struct tm		  *tmlocal; 
@@ -209,9 +249,10 @@ int save_image_into_sdcard(Mat _image)
 		
 	}
 	tmlocal = localtime(&tv.tv_sec); 
-	sprintf(name_head, "%d_%d_%ld", tmlocal->tm_min,
+	sprintf(name_head, "No-%d_%d_%d_%ld", *image_cnt,tmlocal->tm_min,
 									tmlocal->tm_sec,
 									tv.tv_usec); 
+	(*image_cnt)++;
 
 	stream.str("");
 	stream << cur_height;
@@ -223,6 +264,50 @@ int save_image_into_sdcard(Mat _image)
 }
 
 Mat img;
+
+void change_image_version(const char* version)
+{
+	int fd = 0;
+	int res = 0;
+	struct flock lock;
+	
+	fd = open("/home/ubuntu/Work/Test/output/version.txt", O_RDWR | O_CREAT, 0644);
+	if(-1 == fd)
+	{
+		perror("open");
+	}
+	
+	res = lseek(fd, 0, SEEK_SET);
+	if(-1 == res)
+	{
+		perror("lseek");
+	}
+
+	
+	lock.l_type=F_WRLCK;
+	lock.l_whence=SEEK_SET;
+	lock.l_start=0;
+	lock.l_len=10;
+	lock.l_pid=-1;
+	
+	res=fcntl(fd,F_SETLK,&lock);
+	if(-1==res)
+	{
+		perror("fcntl");
+	}
+	
+	res = write(fd, version, 1);
+	if(-1 == res)
+	{
+		perror("write");
+	}
+
+	res = close(fd);
+	if(-1 == res)
+	{
+		perror("close");
+	}
+}
 static void *capture_thread_func(void * arg)
 {	
 	//thread_binding_cpu(NULL, CAPTURE_JOB_CPU);
@@ -230,10 +315,10 @@ static void *capture_thread_func(void * arg)
 	int time_ = 0;
 	int reopen_cnt = 0;
 	int cache_cnt = 0;
+	int image_cnt = 0;
+	
 	//xyVision::GetTarget sample("config.ini");
-
 	//reopen has no effect
-
 _reopen:
 	cv::VideoCapture cap(0);
 	//or cv::VideoCapture cap(200);
@@ -250,7 +335,7 @@ _reopen:
 	
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, (double)1280);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, (double)720);
-	cap.set(CV_CAP_PROP_SATURATION, (double)0.5);
+	//cap.set(CV_CAP_PROP_SATURATION, (double)0.5);
 	
 	cout << "CV_CAP_PROP_FRAME_WIDTH " << cap.get(CV_CAP_PROP_FRAME_WIDTH) << endl;
 	cout << "CV_CAP_PROP_FRAME_HEIGHT " << cap.get(CV_CAP_PROP_FRAME_HEIGHT) << endl;
@@ -259,7 +344,7 @@ _reopen:
 	while(1)
 	{	
 		if(if_capture_on())
-		{
+		{	
 			sem_wait(&image_handle_sem);	//除第一次外，等待image_identify_thread_func处理完图像
 			cap >> img;
 			if(!img.data)
@@ -272,14 +357,22 @@ _reopen:
 			time_++;
 			if(time_ == 1)
 			{
-				save_image_into_sdcard(img);
+				save_image_into_sdcard(img,&image_cnt);
 				time_ = 0;
 			}
 			sem_post(&image_get_sem);		
-			usleep(100000);			//100ms时CPU占用率为7.7%左右
+			usleep(500000);			//100ms时CPU占用率为7.7%左右, try 200ms 0317
 		}
+		
+		//add 0316 ,test close capture dev
 		else
 		{
+			if(if_capture_off())
+			{
+			 	printf("----close capture!----\n");
+			 	cap.release();
+			 	goto _exit;
+			}
 			wait_capture_on();
 			for(cache_cnt = 0; cache_cnt<5; cache_cnt++)
 			{

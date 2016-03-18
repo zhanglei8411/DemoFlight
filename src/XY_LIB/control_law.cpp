@@ -12,21 +12,25 @@ extern Leg_Node *cur_legn;
 
 static void limit_range(double *src_data,double range)
 {
-	if( *src_data > 0 )
+	range = fabs(range);
+	if (*src_data > 0)
 	{
 		if( *src_data > range )
 		{
 			*src_data = range;
 		}
 	}
-	else
+	else if (*src_data < 0)
 	{
 		if( *src_data < (0 - range) )
 		{
 			*src_data = 0 - range;
 		}
-	}		
+	}
+	else
+		*src_data = 0;
 }
+
 
 void init_g_origin_pos(api_pos_data_t *_g_origin_pos)
 {
@@ -202,6 +206,7 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
     double k1d, k1p, k2d, k2p;
     float target_dist;
     int arrive_flag = 1;
+	int use_version_1 = 0;
     //int image_height_use_flag = 0;
     
     
@@ -251,6 +256,19 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_ve
         //yaw_angle	= 180 / PI * yaw_rard;
         //roll_angle	= 180 / PI * roll_rard;
         //pitch_angle = 180 / PI * pitch_rard;
+
+	   if ( 5 <= _cpos.height && use_version_1 == 0)
+	   {
+			use_version_1 = 1;
+			
+	   }
+
+	   if ( use_version_1 == 1)
+	   	{
+			change_image_version("1");
+			use_version_1 = 2;
+	   }
+	   	
         
         if ( 1 )
         {
@@ -1184,7 +1202,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
                         target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));// add 0229, update the target value after limit the target xy
                     }
                     
-                    printf("GetNewTarget-->cur_tar_x=%.4f,cur_tar_y=%.4f,tar_dis=%.4f,gps_vx=%.4f,gps_vy=%.4f",cur_target_xyz.x, cur_target_xyz.y, target_dist, _cvel.x, _cvel.y);
+                    printf("GetNewTarget-->cur_tar_x=%.4f,cur_tar_y=%.4f,tar_dis=%.4f,gps_vx=%.4f,gps_vy=%.4f\n",cur_target_xyz.x, cur_target_xyz.y, target_dist, _cvel.x, _cvel.y);
                     
                     /***Init the integration para***
                      **1.count
@@ -1441,7 +1459,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
         
         if ( 75 <= tar_arr_count )
         {
-            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark, last_dis_to_mark / target_dist, integration_count_xy);
+            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark, (last_dis_to_mark / target_dist) * 100, integration_count_xy);
             arrive_flag = 1;
         }
         
@@ -1825,7 +1843,7 @@ int XY_Ctrl_Drone_Up_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_vel
         
         if ( 75 <= tar_arr_count )
         {
-            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark, last_dis_to_mark / target_dist, integration_count_xy);
+            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark,  (last_dis_to_mark / target_dist) * 100, integration_count_xy);
             arrive_flag = 1;
         }
             
@@ -1935,6 +1953,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
     double integ_mem_vx = 0,integ_mem_vy = 0, integ_mem_px = 0,integ_mem_py = 0;
     int print_i = 0;
     int tar_arr_count = 0;
+	int use_version_3 = 0;
     
     //DJI_Pro_Get_Pos(&_focus_point);// del 0316
     DJI_Pro_Get_GroundVo(&_cvel);
@@ -1966,7 +1985,20 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
         DJI_Pro_Get_GroundVo(&_cvel);
         DJI_Pro_Get_Quaternion(&_cquaternion);
         DJI_Pro_Get_Broadcast_Data(&cw);
-        
+
+		/*0317 night*/
+		if ( 5 >= _cpos.height && use_version_3 == 0)
+	   {
+			use_version_3 = 1;
+			
+	   }
+
+	   if ( use_version_3 == 1)
+	   	{
+			change_image_version("3");
+			use_version_3 = 2;
+	   }
+		
         /*Set the ctrl mode flag base on GPS health*/
         if ( CTRL_MODE_CHANGE_GPS < _cpos.health_flag )
         {
@@ -2317,7 +2349,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
                         target_dist = sqrt(pow(cur_target_xyz.x, 2) + pow(cur_target_xyz.y, 2));// add 0229, update the target value after limit the target xy
                     }
                     
-                    printf("GetNewTarget-->cur_tar_x=%.4f,cur_tar_y=%.4f,tar_dis=%.4f,gps_vx=%.4f,gps_vy=%.4f",cur_target_xyz.x, cur_target_xyz.y, target_dist, _cvel.x, _cvel.y);
+                    printf("GetNewTarget-->cur_tar_x=%.4f,cur_tar_y=%.4f,tar_dis=%.4f,gps_vx=%.4f,gps_vy=%.4f\n",cur_target_xyz.x, cur_target_xyz.y, target_dist, _cvel.x, _cvel.y);
                     
                     /***Init the integration para***
                      **1.count
@@ -2574,7 +2606,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
         
         if ( 75 <= tar_arr_count )
         {
-            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark, last_dis_to_mark / target_dist, integration_count_xy);
+            printf("ReadyNewTarget-->cur_dis_x=%.4f,cur_dis_y=%.4f,cur_dis=%.4f,close=%.1f,intXY=%d\n", cxyz_no_gps.x - cur_target_xyz.x, cxyz_no_gps.y - cur_target_xyz.y, last_dis_to_mark, (last_dis_to_mark / target_dist) * 100, integration_count_xy);
             arrive_flag = 1;
         }
         

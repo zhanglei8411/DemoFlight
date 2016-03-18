@@ -142,6 +142,8 @@ int main(int argc,char **argv)
 	
 	signal(SIGINT, handle_signal);
 	signal(SIGSEGV, handle_crash);
+
+	//change_image_version("3");
 	
 	if(XY_Debug_Setup() < 0)
 	{
@@ -360,6 +362,8 @@ _relink:
 	XY_Drone_Execute_Task();
 	
 	XY_Stop_Store_Log();
+	
+	XY_close_Capture();
 	
 	sleep(50);
 	pause();

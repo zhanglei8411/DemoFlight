@@ -275,6 +275,7 @@ int drone_deliver_up_to_h3(void)
 
 static void *drone_deliver_up_thread_func(void * arg)
 {
+	change_image_version("3");
 	XY_Start_Capture();
 	printf("------------------ start up to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H2 - %fm -----------------\n", DELIVER_HEIGHT_OF_UPH2);
@@ -393,10 +394,11 @@ int drone_deliver_down_to_h3(void)
 	t_height 	= DELIVER_HEIGHT_OF_DOWNH3;					//m
 	threshold 	= DELIVER_THRESHOLD_OF_DOWN_TO_H3_OUT;		//m
 	kp_z 		= DELIVER_DOWN_TO_H3_KPZ;
-	
+#if 0	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 	else 
+#endif
 		return -1;
 }
 
@@ -436,7 +438,7 @@ static void *drone_deliver_down_thread_func(void * arg)
 	XY_Debug_Send_At_Once("\n----------------- Find Put Point With Image -----------------\n");
 	
 	message_server_finding_mark();
-
+	
 	XY_Start_Capture();
 	while(1)
 	{
@@ -508,7 +510,7 @@ int drone_goback_up_to_h3(void)
 }
 #if 1
 static void *drone_goback_up_thread_func(void * arg)
-{
+{	
 	XY_Start_Capture();
 	printf("------------------ start up to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H2 - %fm -----------------\n", GOBACK_HEIGHT_OF_UPH2);
@@ -623,10 +625,11 @@ int drone_goback_down_to_h3(void)
 	t_height 	= GOBACK_HEIGHT_OF_DOWNH3;						//m
 	threshold 	= GOBACK_THRESHOLD_OF_DOWN_TO_H3_OUT;			//m
 	kp_z 		= GOBACK_DOWN_TO_H3_KPZ;
-	
+#if 0	
 	if( XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(max_vel, min_vel, t_height, threshold, kp_z) == 1)
 		return 1;
 	else 
+#endif
 		return -1;
 }
 /*
@@ -653,7 +656,7 @@ static void *drone_goback_down_thread_func(void * arg)
 			break;
 	}
 
-#if 0
+#if 1
 	printf("------------------ start find put point ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Start Find Put Point -----------------\n");
 	XY_Start_Capture();

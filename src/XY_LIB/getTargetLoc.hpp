@@ -6,6 +6,7 @@
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/gpu/gpumat.hpp"
 #include "opencv2/video/tracking.hpp"
+#include "aruco.hpp"
 #include <string>
 #include <iostream>
 #include <vector>
@@ -21,7 +22,10 @@ using namespace std;
 */
 
 namespace xyVision{
-
+enum{
+    DAYTIME,
+    NIGHT
+};
 struct cameraParams
 {
     Matx33f cameraMatrix;
@@ -36,6 +40,9 @@ struct cameraParams
 struct targetInformation
 {
     float targetWidth;
+    float targetWidthInner;
+    int targetVersion;
+    aruco::Board board;  
 };
 
 struct processingInformation
@@ -67,6 +74,11 @@ public:
 	*/
 	void clearStates();
 
+    /** @brief set time model
+        @param model xyVision::DAYTIME or xyVision::NIGHT
+    */
+    void setTimeModel(int model);
+
 	int frameCounter;
 	int frameCounterTarget;
 
@@ -87,14 +99,21 @@ public:
 	cv::Point3f lastLoc;
 
 	vector<int> mapping;
+
+    int timeModel;
+
+    targetInformation targetInfo;
+
+    cameraParams cameraInfo;
+
+    int oriTargetVersion;
 private:
     Point3f currentLoc;
     Mat currentImg, previousImg;
-    targetInformation targetInfo;
-	cameraParams cameraInfo;
+    
 	processingInformation proInfo;
     string configFileName;
-
+    string versionFileName;
 
     void adjustImg(Mat & img);
 	void adjustImg_gpu(gpu::GpuMat& img);
@@ -102,14 +121,20 @@ private:
 	void binarizeTarget_HSV(const Mat& img, Mat & bi);
 	void binarizeTarget_LAB(const Mat& img, Mat & bi);
 	void binarizeTarget_gpu(const gpu::GpuMat img, gpu::GpuMat & bi);
+    void binarizeTarget_night(const Mat& img, Mat & bi);
+    
     void imadjust(const Mat1b& src, Mat1b& dst, int tol = 1, Vec2i in = Vec2i(0, 255), Vec2i out = Vec2i(0, 255));
 	//void imadjust_gpu(const gpu::GpuMat& src, gpu::GpuMat& des, int tol = 1, Vec2i in = Vec2i(0, 255), Vec2i out = Vec2i(0, 255));
 	void imadjust_mapping(const Mat& src, Mat& dst, vector<int> mapping);
 	void locating(vector<Point> & tarContour);
+    void locating_tar_ver2(vector<Point> & tarContour_inner, vector<Point>& tarContour_outer);
 	bool contourDetect(Mat& bi, vector<Point> & tarContour);
+    bool contourDetect_day_tar_ver2(const Mat& img, vector<Point>& tarContour_outter, vector<Point>& tarContour_inner);
 	void runOneFrame();
 	void runOneFrame_gpu();
 	double computeRotatedRect(const vector<Point>& contour, cv::Size sz, RotatedRect box, Mat& bi);
+	cv::Mat equalizeIntensity(const Mat& inputImage);
+    int readVersion(const string& fileName);
 };
 
 }
