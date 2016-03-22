@@ -83,6 +83,23 @@ void QUA2ANGLE(api_quaternion_data_t cur_quaternion, Body_Angle *body_angle)
 
 /* ============================================================================
  description:
+yaw_angle is the floating point value representing an angle expressed in radians, 
+indicates the camera x-axis clockwise rotation from north.
+ input:
+ vel limit, max for whole, min for end
+ _t_height, target height
+ _threshold, the error when consider get target
+ _kp_z, the control para
+ =============================================================================*/
+void Rotation_XY(float *ground_offet_x, float *ground_offet_y, float cam_offset_x, float cam_offset_y, float yaw_angle)
+{	
+	*ground_offet_x = cos(yaw_angle) * cam_offset_x - sin(yaw_angle) * cam_offset_y;
+	*ground_offet_y = sin(yaw_angle) * cam_offset_x + cos(yaw_angle) * cam_offset_y;
+}
+
+
+/* ============================================================================
+ description:
  up and down to certain height, use gps to focus xy position
  input:
  vel limit, max for whole, min for end
@@ -1186,7 +1203,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
                     arrive_flag = 0;
                     
                     //set the target with the image target with xyz
-#if 0
+#if 1
                     //consider the diff angle,0316
                     Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, yaw_angle);
 #else
@@ -1995,7 +2012,8 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
 
 	   if ( use_version_3 == 1)
 	   	{
-			change_image_version("3");
+	 /*0317test flight, temo dele*/
+	//		change_image_version("3");
 			use_version_3 = 2;
 	   }
 		
@@ -2322,7 +2340,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
                     arrive_flag = 0;
                     
                     //set the target with the image target with xyz
-#if 0
+#if 1
                     //consider the diff angle,0316
                     Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, yaw_angle);
 #else

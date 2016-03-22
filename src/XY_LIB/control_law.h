@@ -67,6 +67,8 @@ void geo2XYZ(api_pos_data_t pos, XYZ *pXYZ);
 void init_g_origin_pos(api_pos_data_t *_g_origin_pos);
 void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz*pxyz);
 void QUA2ANGLE(api_quaternion_data_t cur_quaternion, Body_Angle *body_angle) ;
+void Routation_XY(float *ground_offet_x, float *ground_offet_y, float cam_offset_x, float cam_offset_y, float yaw_angle);
+
 
 int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);
 int XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER(float _max_vel, float _min_vel, float _t_height, float _threshold, float _t_yaw, float _yaw_threshold, double _kp_z);
