@@ -26,6 +26,10 @@ enum{
     DAYTIME,
     NIGHT
 };
+enum{
+    OUTPUT_FILTER,
+    OUTPUT_VERBOSE
+};
 struct cameraParams
 {
     Matx33f cameraMatrix;
@@ -70,6 +74,7 @@ public:
     */
     Point3f getCurrentLoc();
 
+    vector<Point3f> getAllLoc();
 	/** @brief clear current states
 	*/
 	void clearStates();
@@ -107,8 +112,11 @@ public:
     cameraParams cameraInfo;
 
     int oriTargetVersion;
+
+    
 private:
     Point3f currentLoc;
+    vector<Point3f> allLoc;
     Mat currentImg, previousImg;
     
 	processingInformation proInfo;
@@ -127,8 +135,10 @@ private:
 	//void imadjust_gpu(const gpu::GpuMat& src, gpu::GpuMat& des, int tol = 1, Vec2i in = Vec2i(0, 255), Vec2i out = Vec2i(0, 255));
 	void imadjust_mapping(const Mat& src, Mat& dst, vector<int> mapping);
 	void locating(vector<Point> & tarContour);
+    void locating_verbose(vector<vector<Point> > & tarContours);
     void locating_tar_ver2(vector<Point> & tarContour_inner, vector<Point>& tarContour_outer);
-	bool contourDetect(Mat& bi, vector<Point> & tarContour);
+	bool contourDetect(Mat& bi, vector<Point> & tarContour, vector<vector<Point> > & tarContours);
+   // bool contourDetect_verbose(Mat& bi, vector<vector<Point> > & tarContours);
     bool contourDetect_day_tar_ver2(const Mat& img, vector<Point>& tarContour_outter, vector<Point>& tarContour_inner);
 	void runOneFrame();
 	void runOneFrame_gpu();

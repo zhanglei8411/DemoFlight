@@ -309,6 +309,11 @@ Point3f xyVision::GetTarget::getCurrentLoc()
     return this->currentLoc;
 }
 
+vector<Point3f> xyVision::GetTarget::getAllLoc()
+{
+    return this->allLoc;
+}
+
 void xyVision::GetTarget::imadjust(const Mat1b& src, Mat1b& dst, int tol, Vec2i in, Vec2i out)
 {
     dst = src.clone();
@@ -555,7 +560,7 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
     int size_ker = 2;
     if (this->targetInfo.targetVersion == 1)
     {
-        size_ker = 5;
+        size_ker = 4;
         if (frameCounterTarget > 1 && lastLoc.z < 1000)
             size_ker = 10;
     }
@@ -566,7 +571,7 @@ void xyVision::GetTarget::binarizeTarget_LAB(const Mat& img, Mat & bi)
     Mat kernel = cv::Mat::ones(size_ker, size_ker, CV_8UC1);
     dilate(bi, bi, kernel);
     erode(bi, bi, kernel);
-    //cv::imwrite("bi.bmp", bi);
+    //cv::imwrite("bi.jpg", bi);
 }
 
 void xyVision::GetTarget::binarizeTarget_night(const Mat& img, Mat & bi)
@@ -579,7 +584,7 @@ void xyVision::GetTarget::binarizeTarget_night(const Mat& img, Mat & bi)
     //cv::imwrite("bi.bmp", bi);
 }
 
-bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
+bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour, vector<vector<Point> > & tarContours)
 {
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
@@ -691,6 +696,7 @@ bool xyVision::GetTarget::contourDetect(Mat& bi, vector<Point> & tarContour)
     }
     tarContour = contours[choosen_idx];
     this->lastArea = choosen_aera;
+    tarContours = contours;
     return true;
 }
 
@@ -939,6 +945,33 @@ void xyVision::GetTarget::locating(vector<Point> & tarContour)
     this->lastLoc = this->currentLoc;
 }
 
+void xyVision::GetTarget::locating_verbose(vector<vector<Point> > & tarContours)
+{
+    float boardWidth = this->targetInfo.targetWidth;
+    Matx33f _K = this->cameraInfo.newCameraMatrix;
+    this->allLoc.clear();
+    for (int i = 0; i < (int)tarContours.size(); ++i)
+    {
+        float aveLen;
+        RotatedRect _box = minAreaRect(Mat(tarContours[i]));
+        if (_box.center.x - _box.size.width< 30 || _box.center.x + _box.size.width > cameraInfo.newSize.width - 30 ||
+            _box.center.y - _box.size.height < 30 || _box.center.y + _box.size.height > cameraInfo.newSize.height - 30)
+        {
+            aveLen = std::max(_box.size.width, _box.size.height);
+        }
+        else
+        {
+            aveLen = std::min(_box.size.width, _box.size.height);
+        }
+        Point2f center2d = _box.center;
+        Point3f center3d = Point3f(center2d.x, center2d.y, 1.0f);
+        Point3f pointInPlane = _K.inv() * center3d;
+        Point3f location = pointInPlane * _K(0,0) * (boardWidth / aveLen);
+        this->allLoc.push_back(location);
+    }
+}
+
+
 void xyVision::GetTarget::locating_tar_ver2(vector<Point> & tarContourInner, vector<Point>& tarContourOuter)
 {
     //float scaleFactor = this->proInfo.scale;
@@ -985,14 +1018,6 @@ void xyVision::GetTarget::runOneFrame()
     // convert to pinhole camera
     adjustImg(_img);
 
-    //if (this->frameCounterTarget > 0 && this->lastLoc.z < 500)
-    //{
-    //    this->targetInfo.targetVersion = 3;
-    //}
-    //if (this->frameCounterTarget > 0 && this->lastLoc.z >= 500)
-    //{
-    //    this->targetInfo.targetVersion = this->oriTargetVersion;
-    //}
     if (this->frameCounter % 3 == 0)
     {
         this->readVersion(this->versionFileName);
@@ -1012,10 +1037,13 @@ void xyVision::GetTarget::runOneFrame()
                 this->targetInfo.board, this->cameraInfo.newCameraMatrix,
                 cv::Mat::zeros(1, 5, CV_32F), rvec, tvec) > 0);
             this->currentLoc = Point3f(tvec);
+            this->allLoc.clear();
+            this->allLoc.push_back(this->currentLoc);
             this->lastLoc = this->currentLoc;
         }
         else
         {
+            this->allLoc.clear();
             this->isDetected = false;
         }
         return;
@@ -1023,12 +1051,9 @@ void xyVision::GetTarget::runOneFrame()
 
     Mat bi;
     vector<Point> tarContour, tarContourInner, tarContourOuter;
-
+    vector<vector<Point> > tarContours;
     bool detected = true;
-    //start = clock();
 
-    //this->binarizeTarget(_img, bi);
-    //this->binarizeTarget_HSV(_img, bi);
     if (targetInfo.targetVersion == 1 || (targetInfo.targetVersion == 2 && timeModel == NIGHT))
     {
         if (timeModel == DAYTIME)
@@ -1040,8 +1065,14 @@ void xyVision::GetTarget::runOneFrame()
             this->binarizeTarget_night(_img, bi);
 
         }
-
-        detected = this->contourDetect(bi, tarContour);
+        //if (outputModel == OUTPUT_FILTER)
+        //{
+       detected = this->contourDetect(bi, tarContour, tarContours);
+        //}
+        //else if (outputModel == OUTPUT_VERBOSE)
+        //{
+        //    detected = this->contourDetect_verbose(bi, tarContours);
+        //}
     }
     else if (targetInfo.targetVersion == 2)
     {
@@ -1061,6 +1092,7 @@ void xyVision::GetTarget::runOneFrame()
     if (targetInfo.targetVersion == 1)
     {
         locating(tarContour);
+        locating_verbose(tarContours);   
     }
     else if (targetInfo.targetVersion == 2)
     {
@@ -1086,6 +1118,7 @@ void xyVision::GetTarget::runOneFrame_gpu()
     //time1 = time1 + totaltime;
 
     vector<Point> tarContour;
+    vector<vector<Point> > tarContours;
     bool detected;
 
     //start = clock();
@@ -1102,11 +1135,7 @@ void xyVision::GetTarget::runOneFrame_gpu()
     Mat bi;
     bi_gpu.download(bi);
 
-    detected = this->contourDetect(bi, tarContour);
-
-    //finish = clock();
-    //totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-    //time3 = time3 + totaltime;
+    detected = this->contourDetect(bi, tarContour, tarContours);
 
     if (!detected)
     {

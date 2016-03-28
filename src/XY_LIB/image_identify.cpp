@@ -308,6 +308,46 @@ void change_image_version(const char* version)
 		perror("close");
 	}
 }
+
+int use_gps_height_filter_offset(Point3f* dist, vector<Point3f> src)
+{
+	unsigned int i = 0;
+	api_pos_data_t cur_pos;
+	DJI_Pro_Get_Pos(&cur_pos);
+	int candidatePointer = 0;
+	double centerDis = 0.0;
+	double criteria;
+	printf("-----get %d Point-----\n", src.size());
+	for(i = 0; i < src.size();i++)
+	{
+		if(fabs(cur_pos.height - src[i].z) > 2.0)
+		{
+			continue;
+		}
+		else
+		{
+			centerDis = pow(src[i].x, 2) + pow(src[i].y, 2);
+			candidatePointer++;
+			if (candidatePointer == 1)
+			{
+				criteria = centerDis;
+			}
+			else
+			{
+				if (criteria > centerDis)
+				{
+					*dist = src[i];
+					criteria = centerDis;
+				}
+				else
+				{
+					continue;
+				}
+			}
+		}
+	}
+	return 0;
+}
 static void *capture_thread_func(void * arg)
 {	
 	//thread_binding_cpu(NULL, CAPTURE_JOB_CPU);
@@ -335,6 +375,7 @@ _reopen:
 	
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, (double)1280);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, (double)720);
+	//cap.set(CV_CAP_PROP_SATURATION , (double)0.7);
 	//cap.set(CV_CAP_PROP_SATURATION, (double)0.5);
 	
 	cout << "CV_CAP_PROP_FRAME_WIDTH " << cap.get(CV_CAP_PROP_FRAME_WIDTH) << endl;
@@ -394,7 +435,8 @@ void clear_sample_states(void)
 static void *image_identify_thread_func(void * arg)
 {
 	//thread_binding_cpu(NULL, IMAGE_JOB_CPU);
-	
+	Point3f dist;
+	vector<Point3f> src;
 	//xyVision::GetTarget sample("config.ini");
 	while(1)
 	{	
@@ -404,9 +446,10 @@ static void *image_identify_thread_func(void * arg)
 		if(!sample.isDetected )
 			goto pre_restart;
 
-		cout << sample.getCurrentLoc() << endl;
-
-		set_offset_data(sample.getCurrentLoc());
+		//cout << sample.getCurrentLoc() << endl;
+		src = sample.getAllLoc();
+		use_gps_height_filter_offset(&dist, src);		
+		set_offset_data(dist);
 		//tell_external_offset_is_available();
 #endif
 pre_restart:

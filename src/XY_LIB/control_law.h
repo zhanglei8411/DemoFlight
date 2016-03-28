@@ -52,7 +52,7 @@
 
 #define UP_DOWN_YAW_REDUCE				(0.9)	//"XY_Ctrl_Drone_To_Assign_Height_Has_MaxVel_And_FP_DELIVER" use
 
-
+#define CAM_DIFFRENCE_RAD               (PI / 2) // CAM X-AXIS ANGLE FROM PLANE HEAD;
 
 typedef XYZ Center_xyz;
 
@@ -67,7 +67,10 @@ void geo2XYZ(api_pos_data_t pos, XYZ *pXYZ);
 void init_g_origin_pos(api_pos_data_t *_g_origin_pos);
 void XYZ2xyz(api_pos_data_t s_pos, XYZ pXYZ, Center_xyz*pxyz);
 void QUA2ANGLE(api_quaternion_data_t cur_quaternion, Body_Angle *body_angle) ;
-void Routation_XY(float *ground_offet_x, float *ground_offet_y, float cam_offset_x, float cam_offset_y, float yaw_angle);
+void Rotation_XY(double *ground_offet_x, double *ground_offet_y, double cam_offset_x, double cam_offset_y, float yaw_angle);
+
+int XY_Ctrl_Drone_Circle(float _p2p_height);//zzy0321
+int XY_Ctrl_Drone_Find_Point(void);
 
 
 int XY_Ctrl_Drone_P2P_With_FP_COMMON(float _p2p_height, int _goback);

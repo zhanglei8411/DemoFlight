@@ -275,7 +275,7 @@ int drone_deliver_up_to_h3(void)
 
 static void *drone_deliver_up_thread_func(void * arg)
 {
-	change_image_version("3");
+	change_image_version("1");
 	XY_Start_Capture();
 	printf("------------------ start up to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Up to H2 - %fm -----------------\n", DELIVER_HEIGHT_OF_UPH2);
@@ -544,6 +544,17 @@ static void *drone_goback_p2p_thread_func(void * arg)
 
 
 /* ============================================================================ */
+int drone_goback_circle(void)
+{	
+	float height;
+	height = GOBACK_HEIGHT_OF_DOWNH1;
+	
+	if( XY_Ctrl_Drone_Circle(height)== 1)
+		return 1;
+	else 
+		return -1;
+}
+
 int drone_goback_down_to_h1(void)
 {
 	float max_vel, min_vel, t_height, threshold, t_yaw, yaw_threshold, kp_z;
@@ -565,7 +576,7 @@ int drone_goback_down_to_h1(void)
 
 int drone_goback_find_put_point_with_image(void)
 {
-	if(drone_deliver_find_put_point_with_image() == 1)
+	if(XY_Ctrl_Drone_Find_Point() == 1)
 		return 1;
 	else 
 		return -1;
@@ -589,18 +600,18 @@ int drone_goback_down_to_h2(void)
 }
 
 /*
- *              ---
+ *         ---
  *		    |
  *		    |
  *		   ---	H1,Start to identify image
  *		    |
- *		    |  
+ *		    |
  *		    |   Down with identift image to H2
  *		    |
  *		    |
  *		   ---  H2, Landing
  *		    |
- *		   ---  
+ *		   ---
  */
 static void *drone_goback_down_thread_func(void * arg)
 {
@@ -611,11 +622,18 @@ static void *drone_goback_down_thread_func(void * arg)
 		if( drone_goback_down_to_h1() == 1)
 			break;
 	}
-
-#if 1
+	
+	printf("------------------ start circle ------------------\n");
+	XY_Start_Capture();
+	while(1)
+	{
+		if( drone_goback_circle() == 1)
+			break;
+	}
+	
+#if 0
 	printf("------------------ start find put point ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Start Find Put Point -----------------\n");
-	XY_Start_Capture();
 	while(1)
 	{
 		if( drone_goback_find_put_point_with_image() == 1 )
@@ -623,7 +641,6 @@ static void *drone_goback_down_thread_func(void * arg)
 	}
 #endif
 
-	XY_Start_Capture();
 	printf("------------------ start down to h2 ------------------\n");
 	XY_Debug_Send_At_Once("\n----------------- Down to H2 - %fm -----------------\n", GOBACK_HEIGHT_OF_DOWNH2);
 	while(1)

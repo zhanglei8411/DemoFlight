@@ -93,9 +93,9 @@ void store_depend_stat(int _stat, char *strp)
 	switch(_stat)
 	{
 		case 0x01:
-			sprintf(strp, "%.4f,%.4f,%.4f;%.4f,%.4f,%.4f;%.4f,%.4f,%.4f;%.4f,%.4f,%.4f;%d,%d,%d;%d;%d;", body_angle.roll_deg, body_angle.pitch_deg, body_angle.yaw_deg,
+			sprintf(strp, "%.4f,%.4f,%.4f;%.4f,%.4f,%.4f;%.4f,%.4f,%.4f,%d;%.4f,%.4f,%.4f;%d,%d,%d;%d;%d;", body_angle.roll_deg, body_angle.pitch_deg, body_angle.yaw_deg,
                                                                                                    cur_acc.x, cur_acc.y, cur_acc.z,
-                                                                                                   cur_vo.x, cur_vo.y, cur_vo.z,
+                                                                                                   cur_vo.x, cur_vo.y, cur_vo.z,cur_vo.health_flag,
                                                                                                    cur_broadcast_data.w.x, cur_broadcast_data.w.y, cur_broadcast_data.w.z,
                                                                                                    cur_broadcast_data.mag.x, cur_broadcast_data.mag.y, cur_broadcast_data.mag.z,
                                                                                                    cur_battery_remaining,
@@ -342,7 +342,7 @@ static void *store_to_log_thread_func(void * arg)
 			"linux time;dji time;"
 			"body_roll,body_pitch,body_yaw;"
 			"agx,agy,agz;"
-			"vgx,vgy,vgz;"
+			"vgx,vgy,vgz,vghealth;"
 			"wx,wy,wz;"
 			"mx,my,mz;"
 			"battery;"

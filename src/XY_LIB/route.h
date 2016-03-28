@@ -76,7 +76,7 @@
 /*Take off height correct*/
 #define DIFF_HEIGHT_OF_MANUAL_PACK								(0.1)	
 #define DIFF_HEIGHT_OF_AUTO_PACK								(0.52)
-#define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT				
+#define DIFF_HEIGHT_WHEN_TAKEOFF								(0)		// = TAKEOFF_HEIGHT - TARGET_HEIGHT	value in (-25, inf)		
 
 #define DELIVER_HEIGHT_OF_UPH2										(10.0)	//m
 #define DELIVER_HEIGHT_OF_UPH3										(35.0)

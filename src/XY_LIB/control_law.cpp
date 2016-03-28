@@ -80,21 +80,358 @@ void QUA2ANGLE(api_quaternion_data_t cur_quaternion, Body_Angle *body_angle)
 	body_angle->yaw_deg= 180/PI*atan2(2*(cur_quaternion.q0*cur_quaternion.q3+cur_quaternion.q1*cur_quaternion.q2),1-2*(cur_quaternion.q2*cur_quaternion.q2+cur_quaternion.q3*cur_quaternion.q3));
 }
 
-
 /* ============================================================================
  description:
 yaw_angle is the floating point value representing an angle expressed in radians, 
 indicates the camera x-axis clockwise rotation from north.
- input:
- vel limit, max for whole, min for end
- _t_height, target height
- _threshold, the error when consider get target
- _kp_z, the control para
  =============================================================================*/
-void Rotation_XY(float *ground_offet_x, float *ground_offet_y, float cam_offset_x, float cam_offset_y, float yaw_angle)
+void Rotation_XY(double *ground_offet_x, double *ground_offet_y, double cam_offset_x, double cam_offset_y, float yaw_angle)
 {	
 	*ground_offet_x = cos(yaw_angle) * cam_offset_x - sin(yaw_angle) * cam_offset_y;
 	*ground_offet_y = sin(yaw_angle) * cam_offset_x + cos(yaw_angle) * cam_offset_y;
+}
+
+int XY_Ctrl_Drone_Circle(float _p2p_height)//zzy0321
+{
+    api_vel_data_t _cvel;
+    api_pos_data_t _cpos, _spos;
+	float dir_Yaw = 0;
+    attitude_data_t user_ctrl_data;
+    XYZ cXYZ;
+    Center_xyz cxyz;
+    double x_n_vel = 0, y_e_vel = 0;
+	extern Leg_Node *goback_route_head;
+
+	double rT_x,rT_y;
+	//api_pos_data_t cur_origin;
+	double designatedV = 1;
+	double periodT = 0.02;
+	double rT_sin;
+	double rT_cos;
+
+	int timer = 0;
+	api_quaternion_data_t _cquaternion;
+	short clockwise_flag = 1, circStatus = 1;
+	float radius = 3 , omega, theta,StartTheta,StartYaw;
+	//float center_offsetX,center_offsetY;
+	Body_Angle cur_body_angle;
+	double curRadi = 0;
+	
+	Offset offset;
+	int offset_count = 0;
+
+	omega =  designatedV / radius;
+	//angular velocity
+
+    user_ctrl_data.ctrl_flag = 0x40;
+
+    DJI_Pro_Get_Pos(&_cpos);
+	DJI_Pro_Get_Quaternion(&_cquaternion);
+	QUA2ANGLE(_cquaternion,&cur_body_angle) ;
+
+	_spos.longti = goback_route_head->next->leg.end._longti;
+    _spos.lati = goback_route_head->next->leg.end._lati;
+    _spos.alti = _cpos.alti;
+    _spos.height = _cpos.height;
+
+	StartYaw = cur_body_angle.yaw_deg / 180 * PI;
+	StartTheta = StartYaw; //- clockwise_flag * (PI / 2);
+	theta = StartTheta;
+
+	int tarCnfFlag = 0;
+	int tarRcgFlag = 0;
+	float tarRcgTimer = 0.0;
+
+	//center_offsetX = designatedV / 0.5 * cos(StartYaw);
+	//center_offsetY = designatedV / 0.5 * sin(StartYaw); // Kd is 0.5, to make the movement smooth and accurate, HOVER_POINT_RANGE in P2P should be varied
+
+	printf("-------------------------Search start--------------------------\n");
+
+	while (1) {
+        DJI_Pro_Get_Pos(&_cpos);
+        DJI_Pro_Get_GroundVo(&_cvel);
+
+        geo2XYZ(_cpos, &cXYZ);
+        XYZ2xyz(_spos, cXYZ, &cxyz);
+		//printf("-----_cpos.longti=%.8lf,_cpos.lati%.8lf,cur_longti=%.8lf,cur_lati=%.8lf-------\n",_cpos.longti,_cpos.lati,cur_legn->leg.end._longti,cur_legn->leg.end._lati);
+
+		theta += (clockwise_flag * omega * periodT);
+		//printf("theta = %f\n", theta);
+		//central angle
+
+		rT_sin = sin(theta + clockwise_flag * (PI / 2));
+		rT_cos = cos(theta + clockwise_flag * (PI / 2));
+
+		limit_range(&rT_sin,1.0);
+		limit_range(&rT_cos,1.0);
+
+		rT_x = curRadi * cos(theta); //+ center_offsetX;
+		rT_y = curRadi * sin(theta); //+ center_offsetY;
+
+		//printf("rT_sin=%.4f,rT_cos=%.4f, ",rT_sin,rT_cos);
+		//printf("rT_x=%.4f,rT_y=%.4f, ",rT_x,rT_y);
+		if (!tarCnfFlag)
+		{
+			if(XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0)
+			{
+				if (tarRcgFlag)
+				{
+					offset_count ++;
+				}
+				else
+				{
+					offset_count = 0;
+				}
+				tarRcgFlag = 1;
+				tarRcgTimer = 0.0;
+				printf("--offset_count = %d--\n", offset_count);
+				if (offset_count > 4)
+				{	
+					tarCnfFlag = 1;
+				}			
+			}
+			else
+			{
+				if (tarRcgFlag)
+				{
+					tarRcgTimer += 0.02;
+				}
+				if (tarRcgTimer > 3)
+				{
+					tarRcgFlag = 0;
+				}
+				printf("tarRcgTimer = %.2f, tarRcgFlag = %d\n", tarRcgTimer, tarRcgFlag);
+				
+				if ((circStatus == 1) && (curRadi == radius))
+				{
+					circStatus = 0;
+					//StartTheta = theta;
+					//cirStarX = cxyz.x;
+					//cirStarY = cxyz.y;
+					printf("----------Circling----------\n");
+					continue;
+				}
+				/*
+				else if ((circStatus == 0) && (fabs(fabs(theta - StartTheta)- (2.5 * PI )) < (PI / 4))) //&& ((pow((cxyz.x - cirStarX), 2) + pow((cxyz.y - cirStarY), 2) < 5)))// range = sqrt(5)
+				{
+					circStatus = -1;
+					printf("----------Circle ending------------\n");
+					continue;
+				}
+				else if ((circStatus == -1) &&(sqrt(pow(cxyz.x, 2) + pow(cxyz.y, 2)) < 0.5) && (timer == 0))
+				{
+					printf("----------Circle over------------\n");
+					return 1;
+				}
+				*/
+				else
+				{
+					timer = (timer < 0) ? 0 : (timer + circStatus);
+					x_n_vel = 0.5 * (rT_x - cxyz.x) - 0.1 * (_cvel.x - designatedV * rT_cos);
+					y_e_vel = 0.5 * (rT_y - cxyz.y) - 0.1 * (_cvel.y - designatedV * rT_sin);
+					curRadi = designatedV / 2 * periodT * timer;
+					limit_range(&curRadi,radius);
+					//printf("x_n_vel=%.4f, y_e_vel=%.4f, ",x_n_vel,y_e_vel);
+					//printf("rT_x=%.4f,cxyz.x=%.4f,rT_y=%.4f,cxyz.y=%.4f, ",rT_x,cxyz.x,rT_y,cxyz.y);
+					dir_Yaw = atan2((rT_y - cxyz.y),(rT_x - cxyz.x)) * 180 /PI;
+					//printf("dir_Yaw = %.4f\n",dir_Yaw);
+				}
+			}
+		}
+		else
+		{
+			if (_cvel.x > 0.2 || _cvel.y > 0.2)
+			{
+				x_n_vel = 0.95 * x_n_vel;
+				y_e_vel = 0.95 * y_e_vel;
+			}
+			else
+			{
+				tarCnfFlag = 0;
+				return 1;
+			}		
+		}		
+        user_ctrl_data.roll_or_x = x_n_vel;
+        user_ctrl_data.pitch_or_y = y_e_vel;
+        //user_ctrl_data.thr_z =  _p2p_height - _cpos.height;
+        user_ctrl_data.yaw = dir_Yaw;
+
+        DJI_Pro_Attitude_Control(&user_ctrl_data);
+        set_ctrl_data(user_ctrl_data);
+        usleep(20000);// The control period
+    }
+}
+
+
+/* ============================================================================
+ description:
+ Hover the find the target with image _ new control law 
+ 20160323
+ input:
+ =============================================================================*/
+int XY_Ctrl_Drone_Find_Point(void)
+{
+    api_vel_data_t _cvel;
+    api_pos_data_t _cpos;
+    attitude_data_t user_ctrl_data;
+    api_quaternion_data_t cur_quaternion;
+    //float yaw_angle, roll_angle, pitch_angle;
+    //float yaw_rard;
+    float dir_Yaw;
+    float roll_rard, pitch_rard;
+    Offset offset,offset_adjust;
+    //int target_update=0;
+    int arrive_flag = 1;
+    float x_camera_diff_with_roll;
+    float y_camera_diff_with_pitch;
+    Center_xyz cur_target_xyz;
+    api_pos_data_t target_origin_pos;
+    double k1d, k1p, k2d, k2p;
+    XYZ cXYZ;
+    Center_xyz cxyz;
+    double y_e_vel, x_n_vel;
+    float last_dis_to_mark;
+
+    float assign_height;
+    
+
+    DJI_Pro_Get_Pos(&_cpos);
+
+    //init to find the mark
+    target_origin_pos = _cpos; //get current position
+    
+    cur_target_xyz.x = 0;   //set the target is 0
+    cur_target_xyz.y = 0;
+    
+    user_ctrl_data.ctrl_flag = 0x40;
+    user_ctrl_data.yaw = 0;
+
+    assign_height = _cpos.height; //set height not change
+    
+    while(1)
+    {
+        DJI_Pro_Get_Pos(&_cpos);
+        DJI_Pro_Get_GroundVo(&_cvel);
+
+        DJI_Pro_Get_Quaternion(&cur_quaternion);
+        roll_rard = atan2(2*(cur_quaternion.q0*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q3),1-2*(cur_quaternion.q1*cur_quaternion.q1+cur_quaternion.q2*cur_quaternion.q2));
+        pitch_rard = asin(2*(cur_quaternion.q0*cur_quaternion.q2-cur_quaternion.q3*cur_quaternion.q1));
+		
+        if( XY_Get_Offset_Data(&offset, OFFSET_GET_ID_A) == 0 && arrive_flag == 1)
+        {
+            arrive_flag = 0;
+            // modified to "Meter", raw data from image process is "cm"
+            offset.x = offset.x/100;
+            offset.y = offset.y/100;
+            offset.z = offset.z/100;
+			printf("--[%lf,%lf,%lf]--\n",offset.x,offset.y,offset.z);
+            //adjust with the camera install delta dis
+            offset.x -= CAM_INSTALL_DELTA_X;
+            offset.y -= CAM_INSTALL_DELTA_Y;
+
+	        //adjust the install angle of the camera, get camera actural angle
+            roll_rard += (CAM_INSTALL_DELTA_ROLL) / 180 * PI;
+            pitch_rard += (CAM_INSTALL_DELTA_PITCH) / 180 * PI;	
+            
+            //modified the camera offset with attitude angle, --------NOT INCLUDING the YAW, NEED added!!!
+            x_camera_diff_with_roll = _cpos.height * tan(roll_rard);// modified to use the Height not use offset.z by zl, 0113
+            y_camera_diff_with_pitch = _cpos.height * tan(pitch_rard);// modified to use the Height not use offset.z by zl, 0113
+
+            if( x_camera_diff_with_roll > 0 )
+            {
+                if( x_camera_diff_with_roll > MAX_CAM_DIFF_ADJUST )
+                    x_camera_diff_with_roll = MAX_CAM_DIFF_ADJUST;
+            }
+            else
+            {
+                if( x_camera_diff_with_roll < (0 - MAX_CAM_DIFF_ADJUST) )
+                    x_camera_diff_with_roll = 0 - MAX_CAM_DIFF_ADJUST;
+            }
+            
+            
+            if( y_camera_diff_with_pitch > 0 )
+            {
+                if( y_camera_diff_with_pitch > MAX_CAM_DIFF_ADJUST )
+                    y_camera_diff_with_pitch = MAX_CAM_DIFF_ADJUST;
+            }
+            else
+            {
+                if( y_camera_diff_with_pitch < (0 - MAX_CAM_DIFF_ADJUST) )
+                    y_camera_diff_with_pitch = 0 - MAX_CAM_DIFF_ADJUST;
+            }
+        
+            offset_adjust.x = offset.x - x_camera_diff_with_roll;
+            offset_adjust.y = offset.y - y_camera_diff_with_pitch;
+        
+            //check if close enough to the image target
+            if(sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2)) < DIS_DIFF_WITH_MARK_HOVER)
+            {
+                return 1;       
+            }
+
+            //trans to get the xyz coordination
+            target_origin_pos = _cpos;
+            
+            //set the target with the image target with xyz
+            cur_target_xyz.x =  (-1)*(offset_adjust.y); //add north offset
+            cur_target_xyz.y =  offset_adjust.x; //add east offset  
+
+            //add limit to current target, the step is 3m
+            if (sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2)) > MAX_EACH_DIS_IMAGE_GET_CLOSE)
+            {
+                cur_target_xyz.x = cur_target_xyz.x * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+                cur_target_xyz.y = cur_target_xyz.y * MAX_EACH_DIS_IMAGE_GET_CLOSE / sqrt(pow(cur_target_xyz.x, 2)+pow(cur_target_xyz.y, 2));
+            }
+            
+            //target_update=1;
+        
+        #if DEBUG_PRINT             
+            printf("target x,y-> %.8lf.\t%.8lf.\t%.8lf.\t\n", cur_target_xyz.x,cur_target_xyz.y,last_dis_to_mark);
+        #endif
+	}
+	else
+        {
+            user_ctrl_data.roll_or_x = 0;
+            user_ctrl_data.pitch_or_y = 0;
+            user_ctrl_data.thr_z =  assign_height - _cpos.height;
+        }
+        
+        //hover to FP, but lower kp to the FP without image
+        k1d = 0.05;     
+        k1p = 0.15; //0.1 simulation test ok 0113 //set to 0.2 flight test bad, returm to 0.1   // 01-23 (0.1 to 0.15)
+        k2d = 0.05;
+        k2p = 0.15;     // 01-23 (0.1 to 0.15) not flight test 
+
+        //use the origin updated last time "target_origin_pos", to get the current cxyz
+        geo2XYZ(_cpos, &cXYZ);
+        XYZ2xyz(target_origin_pos, cXYZ, &cxyz);        
+
+        //use the xyz coordination to get the target, the same as the FP control        
+        x_n_vel = -k1p*(cxyz.x-cur_target_xyz.x)-k1d*(_cvel.x);
+        y_e_vel = -k2p*(cxyz.y-cur_target_xyz.y)-k2d*(_cvel.y);
+		dir_Yaw = atan2((cxyz.y-cur_target_xyz.y),(cxyz.x-cur_target_xyz.x)) * 180 /PI;
+
+        
+        user_ctrl_data.roll_or_x = x_n_vel;         
+        user_ctrl_data.pitch_or_y = y_e_vel;        
+        user_ctrl_data.thr_z =  assign_height - _cpos.height;  
+		user_ctrl_data.yaw = dir_Yaw;
+
+        last_dis_to_mark = sqrt(pow((cxyz.x- cur_target_xyz.x), 2)+pow((cxyz.y-cur_target_xyz.y), 2));
+        //last_dis_to_mark=sqrt(pow(offset_adjust.y, 2)+pow(offset_adjust.x, 2));
+        
+        //if (last_dis_to_mark < HOVER_POINT_RANGE)
+        if(last_dis_to_mark < (10*HOVER_POINT_RANGE) )//from 1.5 to 10*0.1=1, zhanglei 0123
+        {
+            arrive_flag = 1;
+            //target_update=0;
+        }
+            
+
+        DJI_Pro_Attitude_Control(&user_ctrl_data);
+        set_ctrl_data(user_ctrl_data);
+        usleep(20000);
+    }
 }
 
 
@@ -917,10 +1254,20 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             ultra_height_filter(pq,ultra_tmp,&ultra_height);
             
             /*valid ultra data*/
-            if ( 0 < ultra_height && 4.0 > ultra_height && 6.0 > _cpos.height )// ultra_height < 10.0-->ultra_height < 4.0, _cpos.height<6.0 by juzheng 0306
+            if ( 0 < ultra_height && 4.0 > ultra_height && ( 6.0 - DIFF_HEIGHT_WHEN_TAKEOFF ) > _cpos.height )// ultra_height < 10.0-->ultra_height < 4.0, _cpos.height<6.0 by juzheng 0306
             {
-                ultra_height -= ULTRA_INSTALL_HEIGHT;
-                
+
+				//zhanglei 0328 add, protect the ultra height not below zero!
+				if ( 0 < ultra_height - ULTRA_INSTALL_HEIGHT )
+				{
+					ultra_height -= ULTRA_INSTALL_HEIGHT;
+				}
+				else
+				{
+					ultra_height = 0;
+					printf("WARNGING]ultra_height data is below ground!\n");
+				}
+				
                 /*start the ultra and integration control*/
                 if ( ultra_height_use_flag == 0 )
                 {
@@ -930,7 +1277,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
                 
                 
                 /*******judge the height really below 3.5m, enter once ******/
-                if (ultra_height < HEIGHT_TO_USE_ULTRA && _cpos.height < 10.0 && ultra_height_is_low == 0)
+                if (ultra_height < HEIGHT_TO_USE_ULTRA && ultra_height_is_low == 0)
                 {
                     ultra_arr[count_ultra_low] = ultra_height;
                     printf("ultra_low[%d] = %.4f\n", count_ultra_low, ultra_arr[count_ultra_low]);
@@ -1090,7 +1437,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
 				printf("IMAGE MODE CHANGE TO 3!\n");
 			}
             
-            if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 && _cpos.height < 10.0 )
+            if (offset.z < HEIGHT_TO_USE_ULTRA && offset.z > 0 && ( 6.0 - DIFF_HEIGHT_WHEN_TAKEOFF ) > _cpos.height )
             {
                 image_arr[count_image_low] = offset.z;
                 //printf("image_low[%d] = %.4f\n", count_image_low, image_arr[count_image_low]);
@@ -1136,9 +1483,16 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
             roll_rard += (CAM_INSTALL_DELTA_ROLL) / 180 * PI;
             pitch_rard += (CAM_INSTALL_DELTA_PITCH) / 180 * PI;
             
-            x_camera_diff_with_roll = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
-            y_camera_diff_with_pitch = (_cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
-            
+            x_camera_diff_with_roll = ( _cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(roll_rard);		// modified to use the Height not use offset.z by zl, 0113
+            y_camera_diff_with_pitch = ( _cpos.height + DIFF_HEIGHT_WHEN_TAKEOFF) * tan(pitch_rard); 	// modified to use the Height not use offset.z by zl, 0113
+
+			//use ultra height to adjust the offset in the height of ultra data can be use
+			if ( 1 == ultra_height_use_flag )
+			{
+				x_camera_diff_with_roll = ultra_height * tan(roll_rard);	
+				y_camera_diff_with_pitch = ultra_height * tan(pitch_rard); 
+			}
+			
             // limit the cam diff
             // add on 01-23
             if( x_camera_diff_with_roll > 0 )
@@ -1205,7 +1559,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_DELIVER(float _max_
                     //set the target with the image target with xyz
 #if 1
                     //consider the diff angle,0316
-                    Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, yaw_angle);
+                    Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, (yaw_rard + CAM_DIFFRENCE_RAD));
 #else
                     cur_target_xyz.x = (-1) * (offset_adjust.y);	//add north offset
                     cur_target_xyz.y = offset_adjust.x; 			//add east offset
@@ -2342,7 +2696,7 @@ int XY_Ctrl_Drone_Down_Has_NoGPS_Mode_And_Approach_Put_Point_GOBACK(float _max_v
                     //set the target with the image target with xyz
 #if 1
                     //consider the diff angle,0316
-                    Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, yaw_angle);
+                    Rotation_XY(&cur_target_xyz.x, &cur_target_xyz.y, offset_adjust.x, offset_adjust.y, (yaw_rard + CAM_DIFFRENCE_RAD));
 #else
                     cur_target_xyz.x = (-1) * (offset_adjust.y);	//add north offset
                     cur_target_xyz.y = offset_adjust.x; 			//add east offset
