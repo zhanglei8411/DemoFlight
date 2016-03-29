@@ -313,24 +313,30 @@ int use_gps_height_filter_offset(Point3f* dist, vector<Point3f> src)
 {
 	unsigned int i = 0;
 	api_pos_data_t cur_pos;
-	DJI_Pro_Get_Pos(&cur_pos);
 	int candidatePointer = 0;
 	double centerDis = 0.0;
-	double criteria;
+	double criteria = 0;
+	int useful_flag = 0;
+	//get position from dji
+	DJI_Pro_Get_Pos(&cur_pos);
 	printf("-----get %d Point-----\n", src.size());
 	for(i = 0; i < src.size();i++)
 	{
-		if(fabs(cur_pos.height - src[i].z) > 2.0)
+		if(fabs(1.6 - (src[i].z / 100)) > 2.0)
+		//if(fabs(cur_pos.height - (src[i].z / 100)) > 2.0)
 		{
 			continue;
 		}
 		else
 		{
+			printf("-----have useful Point-----\n");
+			useful_flag = 1;
 			centerDis = pow(src[i].x, 2) + pow(src[i].y, 2);
 			candidatePointer++;
 			if (candidatePointer == 1)
 			{
 				criteria = centerDis;
+				*dist = src[i];
 			}
 			else
 			{
@@ -346,8 +352,10 @@ int use_gps_height_filter_offset(Point3f* dist, vector<Point3f> src)
 			}
 		}
 	}
-	return 0;
+	return useful_flag;
 }
+
+
 static void *capture_thread_func(void * arg)
 {	
 	//thread_binding_cpu(NULL, CAPTURE_JOB_CPU);
@@ -446,10 +454,12 @@ static void *image_identify_thread_func(void * arg)
 		if(!sample.isDetected )
 			goto pre_restart;
 
-		//cout << sample.getCurrentLoc() << endl;
+		cout << sample.getAllLoc() << endl;
 		src = sample.getAllLoc();
-		use_gps_height_filter_offset(&dist, src);		
-		set_offset_data(dist);
+		if(use_gps_height_filter_offset(&dist, src))
+		{
+			set_offset_data(dist);
+		}
 		//tell_external_offset_is_available();
 #endif
 pre_restart:
